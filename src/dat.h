@@ -3,11 +3,11 @@
 #include "stdafx.h"
 
 
-typedef uint32_t dat_offset;
+typedef uint32_t dat_offset, dat_size;
 
-typedef uint32_t dat_size;
+typedef char dat_name[256];
 
-typedef struct dat_header
+struct dat_header
 {
 	uint32_t magic;
 	uint32_t num_files;
@@ -17,17 +17,15 @@ typedef struct dat_header
 	dat_offset sizes;
 	dat_offset unknown1;
 	uint32_t unknown2;
-} dat_header;
+};
 
-typedef union dat_extension
+union dat_extension
 {
 	char str[4];
 	int num;
-} dat_extension;
+};
 
-typedef char dat_name[256];
-
-typedef struct dat_file
+struct dat_file
 {
 	FILE* file;
 	dat_header header;
@@ -36,10 +34,33 @@ typedef struct dat_file
 	dat_extension* extensions;
 	dat_name* names;
 	dat_size* sizes;
-} dat_file;
+};
 
-dat_file dat_open(const char* filename);
+class DatFile
+{
+	int _numFiles;
+	std::fstream _file;
 
-void dat_seek(dat_file dat, uint32_t index);
+	dat_header _header;
+	dat_offset* _files;
+	dat_extension* _extensions;
+	dat_name* _names;
+	dat_size* _sizes;
 
-void dat_close(dat_file dat);
+public:
+
+private:
+
+public:
+	DatFile(const char* filename);
+	~DatFile();
+
+	__forceinline void Seek(uint32_t index) { _file.seekg(_files[index]); }
+
+	__forceinline int NumFiles() { return _numFiles; }
+	__forceinline std::fstream* GetFile() { return &_file; }
+
+	__forceinline dat_extension* GetExtensions() const { return _extensions; }
+	__forceinline dat_name* GetNames() const { return _names; }
+	__forceinline dat_offset* GetFiles() const { return _files; }
+};

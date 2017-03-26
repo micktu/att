@@ -7,6 +7,8 @@
 
 #include "targetver.h"
 
+#include <iostream>
+#include <fstream>
 #include <stdio.h>
 #include <tchar.h>
 #include <malloc.h>

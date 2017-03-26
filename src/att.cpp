@@ -23,14 +23,17 @@ int main(int argc, char* argv[])
 {
 	if (argc != 2) return 1;
 	
-	dat_file dat = dat_open(argv[1]);
+	char* datFullPath = argv[1];
 
-	if (dat.num_files == 0) return 1;
+	DatFile dat(datFullPath);
 
-	printf("DAT file %s OK.\n\n ", argv[1]);
+	if (dat.NumFiles() == 0) return 1;
 
-	char dat_path[MAX_PATH], dat_filename[MAX_PATH], out_dir[MAX_PATH] = "out";
-	split_path_file(dat_path, dat_filename, argv[1]);
+	char dat_path[MAX_PATH], dat_filename[MAX_PATH];
+	split_path_file(dat_path, dat_filename, datFullPath);
+	printf("DAT file %s is OK.\n\n ", dat_filename);
+
+	char out_dir[MAX_PATH] = "out";
 	CreateDirectoryA(out_dir, NULL);
 
 	sprintf_s(out_dir, "%s\\%.*s", out_dir, (int)strlen(dat_filename) - 4, dat_filename);
@@ -39,17 +42,27 @@ int main(int argc, char* argv[])
 	sprintf_s(out_dir, "%s\\scripts", out_dir);
 	CreateDirectoryA(out_dir, NULL);
 
-	for (int i = 0; i < dat.num_files; i++)
+	dat_extension* extensions = dat.GetExtensions();
+	dat_name* names = dat.GetNames();
+
+	for (int i = 0; i < dat.NumFiles(); i++)
 	{
-		if (dat.extensions[i].num != '\x00nib') continue;
+		if (extensions[i].num != '\x00nib') continue;
 
-		printf("Processing script %s... ", dat.names[i]);
+		dat_name &name = names[i];
 
-		dat_seek(dat, i);
-		script_content* content = script_extract(dat.file);
+		printf("Processing script %s... ", name);
+
+		dat_offset* files = dat.GetFiles();
+
+		FILE* tempFile;
+		int err = fopen_s(&tempFile, datFullPath, "rb");
+		fseek(tempFile, files[i], SEEK_SET);
+		script_content* content = script_extract(tempFile);
+		fclose(tempFile);
 
 		char out_path[MAX_PATH];
-		sprintf_s(out_path, "%s\\%.*s.txt", out_dir, (int)strlen(dat.names[i]) - 4, dat.names[i]);
+		sprintf_s(out_path, "%s\\%.*s.txt", out_dir, (int)strlen(name) - 4, name);
 
 		script_export(content, out_path);
 
@@ -59,8 +72,6 @@ int main(int argc, char* argv[])
 
 		printf("Done.\n");
 	}
-
-	dat_close(dat);
 
 	return 0;
 }
