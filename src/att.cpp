@@ -3,6 +3,8 @@
 
 #include "stdafx.h";
 
+#include <io.h>
+#include <fcntl.h>
 #include <windows.h>
 #include <limits.h>
 
@@ -42,27 +44,28 @@ int main(int argc, char* argv[])
 	sprintf_s(out_dir, "%s\\scripts", out_dir);
 	CreateDirectoryA(out_dir, NULL);
 
-	dat_extension* extensions = dat.GetExtensions();
-	dat_name* names = dat.GetNames();
+	DatFileEntry* entry;
 
 	for (int i = 0; i < dat.NumFiles(); i++)
 	{
-		if (extensions[i].num != '\x00nib') continue;
+		entry = dat[i];
 
-		dat_name &name = names[i];
+		if (entry->Extension.num != '\x00nib') continue;
 
-		printf("Processing script %s... ", name);
+		printf("Processing script %s... ", entry->Name);
 
-		dat_offset* files = dat.GetFiles();
-
-		FILE* tempFile;
-		int err = fopen_s(&tempFile, datFullPath, "rb");
-		fseek(tempFile, files[i], SEEK_SET);
+		char* buffer = new char[entry->Size];
+		dat.ReadFile(i, buffer);
+	
+		FILE* tempFile = tmpfile();
+		fwrite(buffer, entry->Size, 1, tempFile);
+		rewind(tempFile);
 		script_content* content = script_extract(tempFile);
 		fclose(tempFile);
+		delete buffer;
 
 		char out_path[MAX_PATH];
-		sprintf_s(out_path, "%s\\%.*s.txt", out_dir, (int)strlen(name) - 4, name);
+		sprintf_s(out_path, "%s\\%.*s.txt", out_dir, (int)strlen(entry->Name) - 4, entry->Name);
 
 		script_export(content, out_path);
 

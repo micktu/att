@@ -25,27 +25,20 @@ union dat_extension
 	int num;
 };
 
-struct dat_file
+struct DatFileEntry
 {
-	FILE* file;
-	dat_header header;
-	int num_files;
-	dat_offset* files;
-	dat_extension* extensions;
-	dat_name* names;
-	dat_size* sizes;
+	dat_extension Extension;
+	dat_name Name;
+	dat_size Size;
+	dat_offset Offset;
 };
 
 class DatFile
 {
-	int _numFiles;
 	std::fstream _file;
-
+	int _numEntries;
+	DatFileEntry* _entries;
 	dat_header _header;
-	dat_offset* _files;
-	dat_extension* _extensions;
-	dat_name* _names;
-	dat_size* _sizes;
 
 public:
 
@@ -55,12 +48,10 @@ public:
 	DatFile(const char* filename);
 	~DatFile();
 
-	__forceinline void Seek(uint32_t index) { _file.seekg(_files[index]); }
+	void DatFile::ReadFile(int index, char* buffer);
 
-	__forceinline int NumFiles() { return _numFiles; }
-	__forceinline std::fstream* GetFile() { return &_file; }
+	DatFileEntry* operator[](int index) { return _entries + index; }
 
-	__forceinline dat_extension* GetExtensions() const { return _extensions; }
-	__forceinline dat_name* GetNames() const { return _names; }
-	__forceinline dat_offset* GetFiles() const { return _files; }
+	__forceinline int NumFiles() const { return _numEntries; }
+	__forceinline DatFileEntry* GetFiles() const { return _entries; }
 };

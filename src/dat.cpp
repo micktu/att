@@ -5,7 +5,7 @@
 
 DatFile::DatFile(const char* filename)
 {
-	_numFiles = 0;
+	_numEntries = 0;
 
 	_file.open(filename, std::ios::in | std::ios::binary);
 
@@ -23,34 +23,57 @@ DatFile::DatFile(const char* filename)
 		return;
 	}
 
-	_numFiles = _header.num_files;
+	_numEntries = _header.num_files;
 
-	_files = new dat_offset[_numFiles];
-	_file.seekg(_header.files, std::ios::beg);
-	_file.read((char*)_files, sizeof(dat_offset) * _numFiles);
+	dat_offset* offsets = new dat_offset[_numEntries];
+	_file.seekg(_header.files);
+	_file.read((char*)offsets, sizeof(dat_offset) * _numEntries);
 
-	_extensions = new dat_extension[_numFiles];
-	_file.seekg(_header.extensions, std::ios::beg);
-	_file.read((char*)_extensions, sizeof(dat_extension) * _numFiles);
+	dat_extension* extensions = new dat_extension[_numEntries];
+	_file.seekg(_header.extensions);
+	_file.read((char*)extensions, sizeof(dat_extension) * _numEntries);
 
-	_names = new dat_name[_numFiles];
-	_file.seekg(_header.names, std::ios::beg);
+	dat_name* names = new dat_name[_numEntries];
+	_file.seekg(_header.names);
 	uint32_t name_size;
 	_file.read((char*)&name_size, sizeof(name_size));
-	for (int i = 0; i < _numFiles; i++)
+	for (int i = 0; i < _numEntries; i++)
 	{
-		_file.read(_names[i], name_size);
+		_file.read(names[i], name_size);
 	}
 
-	_sizes = new dat_size[_numFiles];
-	_file.seekg(_header.sizes, std::ios::beg);
-	_file.read((char*)_sizes, sizeof(dat_size) * _numFiles);
+	dat_size* sizes = new dat_size[_numEntries];
+	_file.seekg(_header.sizes);
+	_file.read((char*)sizes, sizeof(dat_size) * _numEntries);
+
+	_entries = new DatFileEntry[_numEntries];
+
+	DatFileEntry entry;
+
+	for (int i = 0; i < _numEntries; i++)
+	{
+		DatFileEntry entry;
+		strcpy_s(entry.Name, names[i]);
+		entry.Extension = extensions[i];
+		entry.Size = sizes[i];
+		entry.Offset = offsets[i];
+
+		_entries[i] = entry;
+	}
+
+	delete offsets;
+	delete extensions;
+	delete names;
+	delete sizes;
+}
+
+void DatFile::ReadFile(int index, char* buffer)
+{
+	_file.seekg(_entries[index].Offset);
+	_file.read(buffer, _entries[index].Size);
 }
 
 DatFile::~DatFile()
 {
-	delete _files;
-	delete _extensions;
-	delete _names;
-	delete _sizes;
+
 }
