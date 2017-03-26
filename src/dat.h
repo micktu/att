@@ -52,6 +52,5 @@ public:
 
 	DatFileEntry* operator[](int index) { return _entries + index; }
 
-	__forceinline int NumFiles() const { return _numEntries; }
-	__forceinline DatFileEntry* GetFiles() const { return _entries; }
+	__forceinline int NumEntries() const { return _numEntries; }
 };

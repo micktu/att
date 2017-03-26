@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 
 	DatFile dat(datFullPath);
 
-	if (dat.NumFiles() == 0) return 1;
+	if (dat.NumEntries() == 0) return 1;
 
 	char dat_path[MAX_PATH], dat_filename[MAX_PATH];
 	split_path_file(dat_path, dat_filename, datFullPath);
@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
 
 	DatFileEntry* entry;
 
-	for (int i = 0; i < dat.NumFiles(); i++)
+	for (int i = 0; i < dat.NumEntries(); i++)
 	{
 		entry = dat[i];
 
