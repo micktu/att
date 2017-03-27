@@ -1,13 +1,12 @@
-#include "dat.h"
+#include "DatFile.h"
 
 #include "stdafx.h"
-
 
 DatFile::DatFile(const char* filename)
 {
 	_numEntries = 0;
 
-	_file.open(filename, std::ios::in | std::ios::binary);
+	_file.open(filename, std::ios::in | std::ios::out | std::ios::binary);
 
 	if (!_file.is_open())
 	{
@@ -52,7 +51,6 @@ DatFile::DatFile(const char* filename)
 
 	for (int i = 0; i < _numEntries; i++)
 	{
-		DatFileEntry entry;
 		strcpy_s(entry.Name, names[i]);
 		entry.Extension = extensions[i];
 		entry.Size = sizes[i];
@@ -73,7 +71,68 @@ void DatFile::ReadFile(int index, char* buffer)
 	_file.read(buffer, _entries[index].Size);
 }
 
-DatFile::~DatFile()
+void DatFile::InjectFile(int index, char * buffer, uint32_t numBytes)
 {
+	_file.seekp(0, std::ios::end);
+	uint32_t offset = (uint32_t)_file.tellp();
+	_file.write(buffer, numBytes);
 
+	_file.seekp(_header.files + sizeof(dat_offset) * index);
+	_file.write((char*)&offset, sizeof(dat_offset));
+
+	_file.seekp(_header.sizes + sizeof(dat_size) * index);
+	_file.write((char*)&numBytes, sizeof(dat_size));
+}
+
+int DatFile::FindFile(const char * name)
+{
+	for (int i = 0; i < _numEntries; i++)
+	{
+		if (strcmp(name, _entries[i].Name) == 0)
+		{
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+void DatFile::ExtractFile(int index, const char * outPath)
+{
+	DatFileEntry* entry = &_entries[index];
+
+	char* outFilename = new char[MAX_PATH];
+	sprintf(outFilename, "%s\\%s", outPath, entry->Name);
+
+	char* buffer = new char[entry->Size];
+	ReadFile(index, buffer);
+
+	std::fstream file(outFilename, std::ios::out | std::ios::binary);
+	file.write(buffer, entry->Size);
+	delete outFilename;
+}
+
+void DatFile::ExtractAll(const char * outPath)
+{
+	for (int i = 0; i < _numEntries; i++)
+	{
+		ExtractFile(i, outPath);
+	}
+}
+
+void DatFile::PrintFiles()
+{
+	for (int i = 0; i < _numEntries; i++)
+	{
+		puts(_entries[i].Name);
+	}
+}
+
+DatFile::~DatFile()
+
+{
+	if (_numEntries > 0)
+	{
+		delete _entries;
+	}
 }

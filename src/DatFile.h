@@ -48,9 +48,13 @@ public:
 	DatFile(const char* filename);
 	~DatFile();
 
-	void DatFile::ReadFile(int index, char* buffer);
-
-	DatFileEntry* operator[](int index) { return _entries + index; }
+	void ReadFile(int index, char* buffer);
+	void InjectFile(int index, char * buffer, uint32_t numBytes);
+	int FindFile(const char* name);
+	void ExtractFile(int index, const char* outPath);
+	void ExtractAll(const char* outPath);
+	void PrintFiles();
 
 	__forceinline int NumEntries() const { return _numEntries; }
+	__forceinline DatFileEntry* operator[](int index) { return _entries + index; }
 };

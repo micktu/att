@@ -1,19 +1,16 @@
+#include "stdafx.h"
 #include "script.h"
 
-#include "stdafx.h"
-
-#include "mruby.h"
-#include "mruby/dump.h"
-#include "mruby/opcode.h"
-#include "mruby/string.h"
-
+#include <string>;
+using namespace std::string_literals;
 
 script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 {
-	script_content* content = (script_content*)malloc(sizeof(script_content));
+	script_content* content = new script_content;
 	content->num_messages = 0;
 	content->num_scenes = 0;
 
+	int message_index;
 	mrb_value messages[8];
 
 	int counter = 0;
@@ -29,7 +26,10 @@ script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 		case STATE_IDLE:
 		case STATE_COLLECTING_STRINGS:
 			if (opcode == OP_STRING) {
-				messages[counter++] = irep->pool[GETARG_Bx(code)];
+				int index = GETARG_Bx(code);
+				if (counter < 1) message_index = index;
+				
+				messages[counter++] = irep->pool[index];
 				state = STATE_COLLECTING_STRINGS;
 
 				if (counter > 7) state = STATE_EXPECTING_ARRAY;
@@ -55,7 +55,7 @@ script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 				continue;
 			}
 
-			printf("Expected OP_ARRAY, got %d", opcode);
+			printf("Expected OP_ARRAY, got %d @ %d | ", opcode, i);
 			counter = 0;
 			state = STATE_IDLE;
 			break;
@@ -76,6 +76,8 @@ script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 				copy_rstring(messages[6], message.kr);
 				copy_rstring(messages[7], message.cn);
 
+				message.irep = irep;
+				message.index = message_index;
 				content->messages[content->num_messages++] = message;
 
 				state = STATE_IDLE;
@@ -84,7 +86,7 @@ script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 			}
 
 			counter = 0;
-			printf("Expected OP_SETCONST, got %d", opcode);
+			printf("Expected OP_SETCONST, got %d @ %d | ", opcode, i);
 			state = STATE_IDLE;
 			break;
 		}
@@ -130,16 +132,16 @@ script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 			content->scenes[content->num_scenes++] = *scene;
 		}
 
-		free(section);
+		delete section;
 	}
 
 	return content;
 }
 
-script_content* script_extract(FILE* script)
+script_content* script_extract(const char* bin)
 {
 	mrb_state* mrb = mrb_open();
-	mrb_irep* irep = mrb_read_irep_file(mrb, script);
+	mrb_irep* irep = mrb_read_irep(mrb, (uint8_t*)bin);
 
 	script_content* content = collect_dialogue(mrb, irep);
 	mrb_close(mrb);
@@ -210,7 +212,7 @@ void fprint_irep(mrb_state* mrb, mrb_irep* irep, FILE* out)
 	for (int i = 0; i < irep->ilen; i++)
 	{
 		mrb_code c = irep->iseq[i];
-		fprintf(out, "OP: %d A: %d B: %d: C: %d Bx: %d\n", GET_OPCODE(c), GETARG_A(c), GETARG_B(c), GETARG_C(c), GETARG_Bx(c));
+		fprintf(out, "%d OP: %d A: %d B: %d: C: %d Bx: %d\n", i, GET_OPCODE(c), GETARG_A(c), GETARG_B(c), GETARG_C(c), GETARG_Bx(c));
 	}
 
 	fprintf(out, "\n");
@@ -221,12 +223,10 @@ void fprint_irep(mrb_state* mrb, mrb_irep* irep, FILE* out)
 	}
 }
 
-void script_export_debug(FILE* file, const char* out_filename)
+void script_export_debug(const char* bin, const char* out_filename)
 {
-	long initial_offset = ftell(file);
-
 	mrb_state* mrb = mrb_open();
-	mrb_irep* irep = mrb_read_irep_file(mrb, file);
+	mrb_irep* irep = mrb_read_irep(mrb, (uint8_t*)bin);
 
 	FILE* out;
 	fopen_s(&out, out_filename, "wb");
@@ -235,8 +235,7 @@ void script_export_debug(FILE* file, const char* out_filename)
 
 	mrb_close(mrb);
 
-	fseek(file, initial_offset, SEEK_SET);
-	script_content* content = script_extract(file);
+	script_content* content = script_extract(bin);
 
 	for (int i = 0; i < content->num_messages; i++)
 	{
@@ -264,6 +263,42 @@ void script_export_debug(FILE* file, const char* out_filename)
 	}
 
 	fclose(out);
+}
+
+char* script_import(const char* bin, const char* filename, int* size)
+{
+	// Open text file
+	// Find messages
+	// Open irep
+
+	mrb_state* mrb = mrb_open();
+	mrb_irep* irep = mrb_read_irep(mrb, (uint8_t*)bin);
+
+	script_content* content = collect_dialogue(mrb, irep);
+	
+	script_message* message = script_find_messsage(content, "M0010_S0005_S0000_101_a2b");
+
+	const char* val = mrb_str_to_cstr(mrb, message->irep->pool[message->index + 1]);
+	printf("\n%s\n\n", val);
+
+	message->irep->pool[message->index + 1] = mrb_str_new_cstr(mrb, u8"Микту ебашит");
+
+	size_t outSize;
+	uint8_t* buffer = new uint8_t[1024 * 1024];
+	mrb_dump_irep(mrb, irep, 0, &buffer, &outSize);
+	
+	mrb_close(mrb);
+
+	char* outBuffer = new char[outSize];
+	memcpy(outBuffer, buffer, outSize);
+
+	*size = outSize;
+	return outBuffer;
+
+	// Replace messages in irep
+	// dump irep
+	// replace binary in dat
+
 }
 
 script_message* script_find_messsage(script_content* content, const char* id)

@@ -10,20 +10,17 @@
     <ClCompile Include="src\att.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\dat.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\script.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\DatFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\dat.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\script.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -31,6 +28,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="src\targetver.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DatFile.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

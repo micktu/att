@@ -2,6 +2,11 @@
 
 #include "stdafx.h"
 
+#include "mruby.h"
+#include "mruby/dump.h"
+#include "mruby/opcode.h"
+#include "mruby/string.h"
+
 
 #define STATE_IDLE 0
 #define STATE_COLLECTING_STRINGS 1
@@ -24,6 +29,9 @@ typedef struct script_message
 	char cn[256];
 
 	char ru[256];
+
+	mrb_irep* irep;
+	int index;
 } script_message;
 
 typedef struct script_scene
@@ -41,10 +49,12 @@ typedef struct script_content
 	script_scene scenes[100];
 } script_content;
 
-script_content* script_extract(FILE* script);
+script_content* script_extract(const char* bin);
 
 void script_export(script_content* content, const char* filename);
 
-void script_export_debug(FILE* file, const char* out_filename);
+void script_export_debug(const char* bin, const char* out_filename);
+
+char* script_import(const char* bin, const char* filename, int* size);
 
 script_message* script_find_messsage(script_content* content, const char* id);

@@ -151,12 +151,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\att.cpp" />
-    <ClCompile Include="src\dat.cpp" />
+    <ClCompile Include="src\DatFile.cpp" />
     <ClCompile Include="src\script.cpp" />
     <ClCompile Include="src\stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\dat.h" />
+    <ClInclude Include="src\DatFile.h" />
     <ClInclude Include="src\script.h" />
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\targetver.h" />
