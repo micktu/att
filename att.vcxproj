@@ -150,19 +150,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="src\att.cpp" />
     <ClCompile Include="src\DatFile.cpp" />
+    <ClCompile Include="src\GameData.cpp" />
     <ClCompile Include="src\script.cpp" />
     <ClCompile Include="src\stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\DatFile.h" />
+    <ClInclude Include="src\GameData.h" />
     <ClInclude Include="src\script.h" />
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\targetver.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="README.md" />
+    <ClInclude Include="src\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,38 +1,53 @@
 // att.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h";
+#include "stdafx.h"
 
-#include <Shlobj.h>
-#include <fcntl.h>
-#include <conio.h>
-
+#include "utils.h"
 #include "DatFile.h"
 #include "script.h"
 
-
-void split_path_file(char* p, char* f, char *pf) {
-	char *slash = pf, *next;
-	while ((next = strpbrk(slash + 1, "\\/"))) slash = next;
-	if (pf != slash) slash++;
-
-	strncpy_s(p, slash - pf + 1, pf, slash - pf);
-	strcpy_s(f, strlen(slash) + 1, slash);
-}
-
-void create_dir_recursive(char* path)
+void process_script(DatFileEntry* entry, char* outPath, bool debug)
 {
-	char fullPath[MAX_PATH];
-	GetFullPathNameA(path, MAX_PATH, fullPath, NULL);
-	SHCreateDirectoryExA(NULL, fullPath, NULL);
+	printf("Processing script %s... ", entry->Name);
+
+	char* buffer = new char[entry->Size];
+	entry->Dat->ReadFile(entry->Index, buffer);
+	script_content* content = script_extract(buffer);
+
+	char out_path[MAX_PATH];
+	sprintf_s(out_path, "%s\\%.*s.txt", outPath, (int)strlen(entry->Name) - 4, entry->Name);
+
+	script_export(content, out_path);
+
+	if (debug)
+	{
+		sprintf_s(out_path, "%s\\%.*s.debug.txt", outPath, (int)strlen(entry->Name) - 4, entry->Name);
+		script_export_debug(buffer, out_path);
+	}
+
+	delete buffer;
 }
 
-void do_export(char* datPath, char* outPath, bool debug)
+void process_subtitle(DatFileEntry* entry, char* outPath)
+{
+	char* buffer = new char[entry->Size];
+	entry->Dat->ReadFile(entry->Index, buffer);
+
+	subtitle_content* subtitle = (subtitle_content*)buffer;
+
+	for (uint32_t i = 0; i < subtitle->numEntries; i++)
+	{
+		wprintf(L"%s : %s", subtitle->entries[i].id, subtitle->entries[i].text);
+	}
+}
+
+void do_export_single(wchar_t* datPath, char* outPath, bool debug)
 {
 	DatFile dat(datPath);
 
 	if (dat.NumEntries() == 0) return;
-
+	/*
 	char dat_path[MAX_PATH], dat_filename[MAX_PATH];
 	split_path_file(dat_path, dat_filename, datPath);
 	printf("DAT file %s is OK.\n\n", dat_filename);
@@ -41,11 +56,17 @@ void do_export(char* datPath, char* outPath, bool debug)
 	GetFullPathNameA(outPath, MAX_PATH, fullPath, NULL);
 	SHCreateDirectoryExA(NULL, fullPath, NULL);
 
-	sprintf_s(fullPath, "%s\\%.*s", fullPath, (int)strlen(dat_filename) - 4, dat_filename);
-	CreateDirectoryA(fullPath, NULL);
+	char datOutPath[MAX_PATH];
+	sprintf_s(datOutPath, "%s\\%.*s", fullPath, (int)strlen(dat_filename) - 4, dat_filename);
+	CreateDirectoryA(datOutPath, NULL);
 
-	sprintf_s(fullPath, "%s\\scripts", fullPath);
-	CreateDirectoryA(fullPath, NULL);
+	char scriptOutPath[MAX_PATH];
+	sprintf_s(scriptOutPath, "%s\\scripts", datOutPath);
+	CreateDirectoryA(scriptOutPath, NULL);
+
+	char subtitleOutPath[MAX_PATH];
+	sprintf_s(subtitleOutPath, "%s\\subtitles", datOutPath);
+	CreateDirectoryA(subtitleOutPath, NULL);
 
 	DatFileEntry* entry;
 
@@ -53,26 +74,18 @@ void do_export(char* datPath, char* outPath, bool debug)
 	{
 		entry = dat[i];
 
-		if (entry->Extension.num != '\x00nib') continue;
-
-		printf("Processing script %s... ", entry->Name);
-
-		char* buffer = new char[entry->Size];
-		dat.ReadFile(i, buffer);
-		script_content* content = script_extract(buffer);
-
-		char out_path[MAX_PATH];
-		sprintf_s(out_path, "%s\\%.*s.txt", fullPath, (int)strlen(entry->Name) - 4, entry->Name);
-
-		script_export(content, out_path);
-
-		if (debug)
+		if (strcmp(entry->Extension, "bin") == 0)
 		{
-			sprintf_s(out_path, "%s\\%.*s.debug.txt", fullPath, (int)strlen(entry->Name) - 4, entry->Name);
-			script_export_debug(buffer, out_path);
+			process_script(entry, scriptOutPath, debug);
 		}
-
-		delete buffer;
+		else if (strcmp(entry->Extension, "smd") == 0)
+		{
+			process_subtitle(entry, subtitleOutPath);
+		}
+		else
+		{
+			continue;
+		}
 
 		//if (strcmp(entry->Name, "p100_fa238e7c_scp.bin") == 0)
 		//{
@@ -90,79 +103,21 @@ void do_export(char* datPath, char* outPath, bool debug)
 
 		printf("Done.\n");
 	}
-}
-
-void do_extract_recursive(char* dirname, char* outPath)
-{
-	char dirMask[MAX_PATH];
-	sprintf_s(dirMask, "%s\\*", dirname);
-	
-	WIN32_FIND_DATAA ffd;
-	HANDLE hFind = INVALID_HANDLE_VALUE;
-	hFind = FindFirstFileA(dirMask, &ffd);
-
-	if (hFind == INVALID_HANDLE_VALUE) return;
-		
-	do
-	{
-		char* name = ffd.cFileName;
-		if (name[0] == '.' && (name[1] == '.' || name[1] == 0))
-		{
-			continue;
-		}
-
-		char filename[MAX_PATH];
-		sprintf_s(filename, "%s\\%s", dirname, ffd.cFileName);
-
-		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-		{
-			printf("Walking into %s\n", filename);
-
-			char path[MAX_PATH];
-			sprintf_s(path, "%s\\%s", outPath, ffd.cFileName);
-			CreateDirectoryA(path, NULL);
-
-			do_extract_recursive(filename, path);
-			continue;
-		}
-
-		if (strcmp(ffd.cFileName + strlen(ffd.cFileName) - 4, ".dat") == 0)
-		{
-			printf("Extracting %s\n", filename);
-			DatFile dat(filename);
-			dat.ExtractAll(outPath);
-		}
-	}
-	while (FindNextFileA(hFind, &ffd) != 0);
-}
-
-void do_extract(char* filename, char* outPath)
-{
-	create_dir_recursive(outPath);
-
-	if (strcmp(filename + strlen(filename) - 4, ".dat") == 0)
-	{
-		DatFile dat(filename);
-		dat.ExtractAll(outPath);
-	}
-
-	if (filename[strlen(filename) - 1] == '\\')
-	{
-		filename[strlen(filename) - 1] = 0;
-	}
-
-	do_extract_recursive(filename, outPath);
-	return;
-}
-
-void do_list(char* filename)
-{
-	DatFile dat(filename);
-	dat.PrintFiles();
+	*/
 }
 
 int main(int argc, char* argv[])
 {
+	path_vector_t files = find_files(L"..\\data\\");
+
+	for (std::wstring s : files)
+	{
+		std::wcout << s << '\n';
+	}
+
+	while (!_kbhit()) {}
+	return 0;
+
 	if (argc < 2) return 0;
 
 	char* command = argv[1];
@@ -172,13 +127,15 @@ int main(int argc, char* argv[])
 		char* datFullPath = argv[2];
 		char* outDir = argv[3];
 
+		//path_vector files = find_files_recursive();
+
 		bool bDebugEnabled = false;
 		if (argc > 4)
 		{
 			bDebugEnabled = strcmp(argv[4], "debug") == 0;
 		}
 
-		do_export(datFullPath, outDir, bDebugEnabled);
+		//do_export(datFullPath, outDir, bDebugEnabled);
 		return 0;
 	}
 
@@ -187,7 +144,7 @@ int main(int argc, char* argv[])
 		char* filename = argv[2];
 		char* outPath = argv[3];
 
-		do_extract(filename, outPath);
+		//do_extract(filename, outPath);
 		return 0;
 	}
 
@@ -195,7 +152,7 @@ int main(int argc, char* argv[])
 	{
 		char* filename = argv[2];
 
-		do_list(filename);
+		//do_list(filename);
 		return 0;
 	}
 

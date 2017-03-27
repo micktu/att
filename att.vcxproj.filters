@@ -5,9 +5,21 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="Headers">
+      <UniqueIdentifier>{e1452758-e696-4f08-8d67-85c3ebb44e79}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\att.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DatFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GameData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\script.cpp">
@@ -16,25 +28,25 @@
     <ClCompile Include="src\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\DatFile.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\DatFile.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GameData.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
     <ClInclude Include="src\script.h">
-      <Filter>Source Files</Filter>
+      <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="src\stdafx.h">
-      <Filter>Source Files</Filter>
+      <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="src\targetver.h">
-      <Filter>Source Files</Filter>
+      <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\DatFile.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="src\utils.h">
+      <Filter>Headers</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="README.md" />
   </ItemGroup>
 </Project>

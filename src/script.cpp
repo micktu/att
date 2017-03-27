@@ -1,8 +1,4 @@
-#include "stdafx.h"
 #include "script.h"
-
-#include <string>;
-using namespace std::string_literals;
 
 script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 {
@@ -235,6 +231,7 @@ void script_export_debug(const char* bin, const char* out_filename)
 
 	mrb_close(mrb);
 
+	/*
 	script_content* content = script_extract(bin);
 
 	for (int i = 0; i < content->num_messages; i++)
@@ -261,7 +258,7 @@ void script_export_debug(const char* bin, const char* out_filename)
 		fputs(message->cn, out);
 		fputs("\n\n", out);
 	}
-
+	*/
 	fclose(out);
 }
 
