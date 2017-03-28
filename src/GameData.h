@@ -2,7 +2,7 @@
 
 #include "stdafx.h"
 
-#include "DatFile.h"
+class DatFile;
 
 class GameData
 {
@@ -21,7 +21,9 @@ class GameData
 
 	};
 
-	std::vector<std::wstring> FileNames;
+	wchar_t BasePath[MAX_PATH];
+	std::vector<std::wstring> PlainFileNames;
+	std::vector<std::wstring> DatFileNames;
 	std::vector<DatFile> DatFiles;
 
 public:
@@ -35,4 +37,6 @@ public:
 	GameData(const wchar_t* path);
 	
 	bool Read(const wchar_t* path);
+
+	void ListFiles();
 };

@@ -3,10 +3,11 @@
 
 #include "stdafx.h"
 
-#include "utils.h"
-#include "DatFile.h"
+//#include "utils.h"
+//#include "DatFile.h"
+#include "GameData.h"
 #include "script.h"
-
+/*
 void process_script(DatFileEntry* entry, char* outPath, bool debug)
 {
 	printf("Processing script %s... ", entry->Name);
@@ -47,7 +48,7 @@ void do_export_single(wchar_t* datPath, char* outPath, bool debug)
 	DatFile dat(datPath);
 
 	if (dat.NumEntries() == 0) return;
-	/*
+	
 	char dat_path[MAX_PATH], dat_filename[MAX_PATH];
 	split_path_file(dat_path, dat_filename, datPath);
 	printf("DAT file %s is OK.\n\n", dat_filename);
@@ -103,23 +104,26 @@ void do_export_single(wchar_t* datPath, char* outPath, bool debug)
 
 		printf("Done.\n");
 	}
-	*/
+	
 }
-
+*/
 int main(int argc, char* argv[])
 {
-	path_vector_t files = find_files(L"..\\data\\");
+	if (argc < 2) return 0;
 
-	for (std::wstring s : files)
-	{
-		std::wcout << s << '\n';
-	}
+	size_t chars = 0;
+	wchar_t path[MAX_PATH];
+	mbstowcs_s(&chars, path, argv[1], MAX_PATH);
+
+	GameData gd;
+
+	gd.Read(path);
+	gd.ListFiles();
 
 	while (!_kbhit()) {}
 	return 0;
 
-	if (argc < 2) return 0;
-
+	/*
 	char* command = argv[1];
 
 	if (strcmp(command, "export") == 0)
@@ -155,7 +159,7 @@ int main(int argc, char* argv[])
 		//do_list(filename);
 		return 0;
 	}
-
+	*/
 	return 0;
 }
 
