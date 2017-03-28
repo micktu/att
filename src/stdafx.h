@@ -10,19 +10,21 @@
 struct IUnknown; // Clang hack
 #include <windows.h>
 
-#include <vector>
-#include <string>
+#include <stdio.h>
+#include <stdint.h>
 #include <iostream>
 #include <fstream>
-#include <stdio.h>
-#include <tchar.h>
-#include <wchar.h>
-#include <string.h>
-#include <stdint.h>
+#include <vector>
 #include <string>
-#include <fcntl.h>
-#include <conio.h>
+#include <wchar.h>
+
 
 using namespace std::string_literals;
+
+#define FORCEINLINE __forceinline
+
+#define cout std::wcout
+#define str_t std::wstring
+#define str_vector_t std::vector<str_t>
 
 // TODO: reference additional headers your program requires here

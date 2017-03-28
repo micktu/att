@@ -28,13 +28,11 @@ struct DatFileEntry
 	dat_name_t Name;
 	dat_size_t Size;
 	dat_offset_t Offset;
-
-	//class DatFile* Dat;
 };
 
 class DatFile
 {
-	wchar_t _filename[MAX_PATH];
+	str_t _filename;
 	std::vector<DatFileEntry> _entries;
 	dat_header _header;
 
@@ -43,20 +41,20 @@ public:
 private:
 
 public:
-	static bool CheckFile(const wchar_t* path);
+	static bool CheckFile(str_t &path);
 	
 	DatFile() = default;
 	DatFile(const DatFile &obj) = default;
-	DatFile(const wchar_t* filename);
+	DatFile(str_t &filename);
 
-	bool Read(const wchar_t* filename);
+	bool Read(str_t &filename);
 	void ReadFile(const DatFileEntry* entry, char* buffer);
 	void InjectFile(int index, char * buffer, uint32_t numBytes);
 	const DatFileEntry* FindFile(const char* name);
 	void ExtractFile(const DatFileEntry* entry, const char * outPath);
 	void ExtractAll(const char* outPath);
 
-	__forceinline const wchar_t* GetFilename() const { return _filename; }
-	__forceinline size_t NumEntries() const { return _entries.size(); }
-	__forceinline DatFileEntry* operator[](int index) { return &_entries[index]; }
+	FORCEINLINE str_t GetFilename() const { return _filename; }
+	FORCEINLINE size_t NumEntries() const { return _entries.size(); }
+	FORCEINLINE DatFileEntry* operator[](int index) { return &_entries[index]; }
 };

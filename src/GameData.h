@@ -2,7 +2,7 @@
 
 #include "stdafx.h"
 
-class DatFile;
+#include "DatFile.h"
 
 class GameData
 {
@@ -21,9 +21,9 @@ class GameData
 
 	};
 
-	wchar_t BasePath[MAX_PATH];
-	std::vector<std::wstring> PlainFileNames;
-	std::vector<std::wstring> DatFileNames;
+	str_t BasePath;
+	str_vector_t PlainFileNames;
+	str_vector_t DatFileNames;
 	std::vector<DatFile> DatFiles;
 
 public:
@@ -31,12 +31,11 @@ public:
 private:
 
 public:
-	GameData();
-	~GameData();
+	GameData() = default;
 
-	GameData(const wchar_t* path);
+	GameData(str_t &path);
 	
-	bool Read(const wchar_t* path);
+	bool Read(str_t path);
 
 	void ListFiles();
 };

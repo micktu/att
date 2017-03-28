@@ -1,77 +1,60 @@
 #include "GameData.h"
 
-#include "DatFile.h"
-
 #include "utils.h"
 
-GameData::GameData()
+GameData::GameData(str_t &path)
 {
-}
-
-GameData::~GameData()
-{
-}
-
-GameData::GameData(const wchar_t * path)
-{
+	GameData();
 	Read(path);
 }
 
-bool GameData::Read(const wchar_t* path)
+bool GameData::Read(str_t path)
 {
-	// determine if path is file or dir
-	// when dir, do recursion
-	// collect list of dat files
-	// collect list of contained files pointing to their dat files
+	uint32_t attributes = GetFileAttributes(path.c_str());
+	if (INVALID_FILE_ATTRIBUTES == attributes) return false;
 
-	wcscpy_s(BasePath, path);
+	BasePath = path;
 	PlainFileNames.clear();
 	DatFileNames.clear();
 	DatFiles.clear();
 
-	if (DatFile::CheckFile(path))
+	if (0 == (FILE_ATTRIBUTE_DIRECTORY & attributes))
 	{
+		if (!DatFile::CheckFile(path)) return false;
 		DatFiles.emplace_back(path);
 		return true;
 	}
 
-	if (is_dir(path))
-	{ 
-		path_vector_t files = find_files(path);
+	str_vector_t files = find_files(path);
 
-		wchar_t fullPath[MAX_PATH];
-		for (std::wstring &filename : files)
+	path.append(L"\\");
+	for (str_t &filename : files)
+	{
+		str_t fullPath = path + filename;
+		if (DatFile::CheckFile(fullPath))
 		{
-			wsprintf(fullPath, L"%s\\%s", path, filename.c_str());
-
-			if (DatFile::CheckFile(fullPath))
-			{
-				DatFileNames.push_back(filename);
-				DatFiles.emplace_back(fullPath);
-				continue;
-			}
-
-			PlainFileNames.push_back(filename);
+			DatFileNames.push_back(filename);
+			DatFiles.emplace_back(fullPath);
+			continue;
 		}
 
-		return true;
+		PlainFileNames.push_back(filename);
 	}
-
 
 	return true;
 }
 
 void GameData::ListFiles()
 {
-	int i = 0;
-	std::vector<DatFile>::iterator it;
-	for (it = DatFiles.begin(); it != DatFiles.end(); ++it, ++i)
+	for (int i = 0; i < DatFiles.size(); ++i)
 	{
-		std::wcout << DatFileNames[i] << '\n';
+		cout << DatFileNames[i] << '\n';
 
-		for (int i = 0; i < it->NumEntries(); i++)
+		DatFile& dat = DatFiles[i];
+
+		for (int j = 0; j < dat.NumEntries(); ++j)
 		{
-			std::wcout << L"-- " << (*it)[i]->Name << '\n';
+			cout << L"-- " << dat[j]->Name << '\n';
 		}
 	}
 }

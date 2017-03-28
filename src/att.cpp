@@ -3,8 +3,9 @@
 
 #include "stdafx.h"
 
+#include <conio.h>
+
 //#include "utils.h"
-//#include "DatFile.h"
 #include "GameData.h"
 #include "script.h"
 /*
