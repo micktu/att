@@ -1,8 +1,4 @@
-#include "stdafx.h"
 #include "script.h"
-
-#include <string>;
-using namespace std::string_literals;
 
 script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 {
@@ -235,6 +231,7 @@ void script_export_debug(const char* bin, const char* out_filename)
 
 	mrb_close(mrb);
 
+	/*
 	script_content* content = script_extract(bin);
 
 	for (int i = 0; i < content->num_messages; i++)
@@ -261,7 +258,7 @@ void script_export_debug(const char* bin, const char* out_filename)
 		fputs(message->cn, out);
 		fputs("\n\n", out);
 	}
-
+	*/
 	fclose(out);
 }
 
@@ -281,7 +278,7 @@ char* script_import(const char* bin, const char* filename, int* size)
 	const char* val = mrb_str_to_cstr(mrb, message->irep->pool[message->index + 1]);
 	printf("\n%s\n\n", val);
 
-	message->irep->pool[message->index + 1] = mrb_str_new_cstr(mrb, u8"Микту ебашит");
+	//message->irep->pool[message->index + 1] = mrb_str_new_cstr(mrb, u8"Микту ебашит");
 
 	size_t outSize;
 	uint8_t* buffer = new uint8_t[1024 * 1024];

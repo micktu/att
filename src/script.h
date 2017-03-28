@@ -49,6 +49,42 @@ typedef struct script_content
 	script_scene scenes[100];
 } script_content;
 
+struct subtitle_entry
+{
+	wchar_t id[0x44];
+	wchar_t text[0x400];
+};
+
+struct subtitle_content
+{
+	uint32_t numEntries;
+	subtitle_entry entries[];
+};
+
+struct subtitle_collection
+{
+	subtitle_content* jp;
+	subtitle_content* en;
+};
+
+struct text_string
+{
+	uint32_t size;
+	wchar_t* text;
+};
+
+struct text_entry
+{
+	text_string id;
+	text_string value;
+};
+
+struct text_content
+{
+	uint32_t numEntries;
+	text_entry* entries;
+};
+
 script_content* script_extract(const char* bin);
 
 void script_export(script_content* content, const char* filename);

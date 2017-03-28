@@ -1,138 +1,138 @@
 #include "DatFile.h"
 
-#include "stdafx.h"
-
-DatFile::DatFile(const char* filename)
+bool DatFile::CheckFile(const wchar_t * path)
 {
-	_numEntries = 0;
+	uint32_t attributes = GetFileAttributes(path);
 
-	_file.open(filename, std::ios::in | std::ios::out | std::ios::binary);
+	if (INVALID_FILE_ATTRIBUTES == attributes) return false;
+	if (FILE_ATTRIBUTE_DIRECTORY & attributes) return false;
 
-	if (!_file.is_open())
-	{
-		std::cout << "Cannot open DAT file.";
-		return;
-	}
-	
-	_file.read((char*)&_header, sizeof(dat_header));
+	uint32_t magic;
+	std::ifstream file(path, std::ios::binary);
+	file.read((char*)&magic, 4);
+	if (DAT_MAGIC != magic) return false;
 
-	if (_header.magic != '\x00TAD')
-	{
-		std::cout << "Malformed DAT header.";
-		return;
-	}
+	return true;
+}
 
-	_numEntries = _header.num_files;
+DatFile::DatFile(const wchar_t* filename)
+{
+	Read(filename);
+}
 
-	dat_offset* offsets = new dat_offset[_numEntries];
-	_file.seekg(_header.files);
-	_file.read((char*)offsets, sizeof(dat_offset) * _numEntries);
+bool DatFile::Read(const wchar_t* filename)
+{
+	wcscpy_s(_filename, filename);
+	_entries.clear();
 
-	dat_extension* extensions = new dat_extension[_numEntries];
-	_file.seekg(_header.extensions);
-	_file.read((char*)extensions, sizeof(dat_extension) * _numEntries);
+	std::ifstream file(filename, std::ios::binary);
 
-	dat_name* names = new dat_name[_numEntries];
-	_file.seekg(_header.names);
+	if (!file.is_open())  return false;
+
+	file.read((char*)&_header, sizeof(dat_header));
+	if (DAT_MAGIC != _header.magic) return false;
+
+	uint32_t numEntries = _header.num_files;
+
+	dat_offset_t* offsets = new dat_offset_t[numEntries];
+	file.seekg(_header.files);
+	file.read((char*)offsets, sizeof(dat_offset_t) * numEntries);
+
+	dat_ext_t* extensions = new dat_ext_t[numEntries];
+	file.seekg(_header.extensions);
+	file.read((char*)extensions, sizeof(dat_ext_t) * numEntries);
+
+	dat_name_t* names = new dat_name_t[numEntries];
+	file.seekg(_header.names);
 	uint32_t name_size;
-	_file.read((char*)&name_size, sizeof(name_size));
-	for (int i = 0; i < _numEntries; i++)
+	file.read((char*)&name_size, sizeof(name_size));
+	for (int i = 0; i < numEntries; i++)
 	{
-		_file.read(names[i], name_size);
+		file.read(names[i], name_size);
 	}
 
-	dat_size* sizes = new dat_size[_numEntries];
-	_file.seekg(_header.sizes);
-	_file.read((char*)sizes, sizeof(dat_size) * _numEntries);
-
-	_entries = new DatFileEntry[_numEntries];
+	dat_size_t* sizes = new dat_size_t[numEntries];
+	file.seekg(_header.sizes);
+	file.read((char*)sizes, sizeof(dat_size_t) * numEntries);
 
 	DatFileEntry entry;
+	//entry.Dat = this;
 
-	for (int i = 0; i < _numEntries; i++)
+	for (int i = 0; i < numEntries; i++)
 	{
+		entry.Index = i;
+
 		strcpy_s(entry.Name, names[i]);
-		entry.Extension = extensions[i];
+		strcpy_s(entry.Extension, extensions[i]);
 		entry.Size = sizes[i];
 		entry.Offset = offsets[i];
 
-		_entries[i] = entry;
+		_entries.push_back(entry);
 	}
 
-	delete offsets;
-	delete extensions;
-	delete names;
-	delete sizes;
+	delete[] offsets;
+	delete[] extensions;
+	delete[] names;
+	delete[] sizes;
+
+	return true;
 }
 
-void DatFile::ReadFile(int index, char* buffer)
+void DatFile::ReadFile(const DatFileEntry* entry, char* buffer)
 {
-	_file.seekg(_entries[index].Offset);
-	_file.read(buffer, _entries[index].Size);
+	std::ifstream file(_filename, std::ios::binary);
+
+	file.seekg(entry->Offset);
+	file.read(buffer, entry->Size);
 }
 
 void DatFile::InjectFile(int index, char * buffer, uint32_t numBytes)
 {
-	_file.seekp(0, std::ios::end);
-	uint32_t offset = (uint32_t)_file.tellp();
-	_file.write(buffer, numBytes);
+	std::ofstream file(_filename, std::ios::binary);
 
-	_file.seekp(_header.files + sizeof(dat_offset) * index);
-	_file.write((char*)&offset, sizeof(dat_offset));
+	file.seekp(0, std::ios::end);
+	uint32_t offset = (uint32_t)file.tellp();
+	file.write(buffer, numBytes);
 
-	_file.seekp(_header.sizes + sizeof(dat_size) * index);
-	_file.write((char*)&numBytes, sizeof(dat_size));
+	file.seekp(_header.files + sizeof(dat_offset_t) * index);
+	file.write((char*)&offset, sizeof(dat_offset_t));
+
+	file.seekp(_header.sizes + sizeof(dat_size_t) * index);
+	file.write((char*)&numBytes, sizeof(dat_size_t));
 }
 
-int DatFile::FindFile(const char * name)
+const DatFileEntry* DatFile::FindFile(const char * name)
 {
-	for (int i = 0; i < _numEntries; i++)
+	for (std::vector<DatFileEntry>::iterator it = _entries.begin(); it != _entries.end(); ++it)
 	{
-		if (strcmp(name, _entries[i].Name) == 0)
+		if (strcmp(name, it->Name) == 0)
 		{
-			return i;
+			return &(*it);
 		}
 	}
 
-	return -1;
+	return nullptr;
 }
 
-void DatFile::ExtractFile(int index, const char * outPath)
+void DatFile::ExtractFile(const DatFileEntry* entry, const char * outPath)
 {
-	DatFileEntry* entry = &_entries[index];
-
-	char* outFilename = new char[MAX_PATH];
-	sprintf(outFilename, "%s\\%s", outPath, entry->Name);
 
 	char* buffer = new char[entry->Size];
-	ReadFile(index, buffer);
+	ReadFile(entry, buffer);
 
-	std::fstream file(outFilename, std::ios::out | std::ios::binary);
+	char* outFilename = new char[MAX_PATH];
+	sprintf_s(outFilename, MAX_PATH, "%s\\%s", outPath, entry->Name);
+
+	std::ofstream file(outFilename, std::ios::binary);
 	file.write(buffer, entry->Size);
-	delete outFilename;
+	delete[] outFilename;
 }
 
 void DatFile::ExtractAll(const char * outPath)
 {
-	for (int i = 0; i < _numEntries; i++)
+	for (std::vector<DatFileEntry>::iterator it = _entries.begin(); it != _entries.end(); ++it)
 	{
-		ExtractFile(i, outPath);
+		ExtractFile(&(*it), outPath);
 	}
 }
 
-void DatFile::PrintFiles()
-{
-	for (int i = 0; i < _numEntries; i++)
-	{
-		puts(_entries[i].Name);
-	}
-}
-
-DatFile::~DatFile()
-
-{
-	if (_numEntries > 0)
-	{
-		delete _entries;
-	}
-}
