@@ -129,7 +129,7 @@ void DatFile::ExtractFile(int index, const char * outPath)
 
 	std::fstream file(outFilename, std::ios::out | std::ios::binary);
 	file.write(buffer, entry->Size);
-	delete outFilename;
+	delete[] outFilename;
 }
 
 void DatFile::ExtractAll(const char * outPath)

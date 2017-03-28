@@ -278,7 +278,7 @@ char* script_import(const char* bin, const char* filename, int* size)
 	const char* val = mrb_str_to_cstr(mrb, message->irep->pool[message->index + 1]);
 	printf("\n%s\n\n", val);
 
-	message->irep->pool[message->index + 1] = mrb_str_new_cstr(mrb, u8"Микту ебашит");
+	//message->irep->pool[message->index + 1] = mrb_str_new_cstr(mrb, u8"Микту ебашит");
 
 	size_t outSize;
 	uint8_t* buffer = new uint8_t[1024 * 1024];

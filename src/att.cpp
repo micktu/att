@@ -26,7 +26,7 @@ void process_script(DatFileEntry* entry, char* outPath, bool debug)
 		script_export_debug(buffer, out_path);
 	}
 
-	delete buffer;
+	delete[] buffer;
 }
 
 void process_subtitle(DatFileEntry* entry, char* outPath)

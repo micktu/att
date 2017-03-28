@@ -7,6 +7,9 @@
 
 #include "targetver.h"
 
+struct IUnknown; // Clang hack
+#include <windows.h>
+
 #include <vector>
 #include <string>
 #include <iostream>
@@ -16,7 +19,6 @@
 #include <wchar.h>
 #include <string.h>
 #include <stdint.h>
-#include <windows.h>
 #include <string>
 #include <fcntl.h>
 #include <conio.h>
