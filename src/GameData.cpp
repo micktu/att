@@ -1,6 +1,7 @@
 #include "GameData.h"
-
 #include "utils.h"
+
+#include <Pathcch.h>;
 
 GameData::GameData(str_t &path)
 {
@@ -14,47 +15,85 @@ bool GameData::Read(str_t path)
 	if (INVALID_FILE_ATTRIBUTES == attributes) return false;
 
 	BasePath = path;
-	PlainFileNames.clear();
-	DatFileNames.clear();
+
 	DatFiles.clear();
+	DatFiles.reserve(0x1000);
+	GameFiles.clear();
+	GameFiles.reserve(0x1000);
 
 	if (0 == (FILE_ATTRIBUTE_DIRECTORY & attributes))
 	{
 		if (!DatFile::CheckFile(path)) return false;
-		DatFiles.emplace_back(path);
+		DatFiles.emplace_back(new DatFile(path));
 		return true;
 	}
 
 	str_vector_t files = find_files(path);
+	path += L"\\";
 
-	path.append(L"\\");
+	wchar_t pathTemp[MAX_PATH];
 	for (str_t &filename : files)
 	{
+		if (!IsRelevantFile(filename)) continue;
+
 		str_t fullPath = path + filename;
+		GameFile* gf = new GameFile(filename, get_file_size(fullPath));
+		GameFiles.emplace_back(gf);
+
 		if (DatFile::CheckFile(fullPath))
 		{
-			DatFileNames.push_back(filename);
-			DatFiles.emplace_back(fullPath);
+			DatFile *dat = new DatFile(fullPath);
+			DatFiles.emplace_back(dat);
+
+			filename.copy(pathTemp, MAX_PATH, 0);
+			PathCchRemoveFileSpec(pathTemp, MAX_PATH);
+			str_t relPath(pathTemp);
+
+			gf->Dat = dat;
+			gf->bIsContainer = true;
+
+			int i = 0;
+			for (DatFileEntry &entry : *dat)
+			{
+				if (!IsRelevantFile(entry.Name)) continue;
+
+				str_t relName = relPath + L"\\";
+				relName += entry.Name;
+
+				gf->Files.emplace_back(relName, entry.Size, gf, dat, i);
+				++i;
+			}
+
 			continue;
 		}
-
-		PlainFileNames.push_back(filename);
 	}
 
 	return true;
 }
 
-void GameData::ListFiles()
+static const str_vector_t RELEVANT_EXTENSIONS = { L".dat", L".bin", L".tmd", L".smd", L".txt" };
+bool GameData::IsRelevantFile(str_t &filename)
 {
-	for (int i = 0; i < DatFiles.size(); ++i)
+	return true;
+
+	for (const str_t &ext : RELEVANT_EXTENSIONS)
 	{
-		cout << DatFileNames[i] << '\n';
-
-		DatFile& dat = DatFiles[i];
-
-		for (int j = 0; j < dat.NumEntries(); ++j)
+		if (0 == filename.compare(filename.length() - 4, filename.length(), ext))
 		{
-			cout << L"-- " << dat[j]->Name << '\n';
+			return true;
 		}
 	}
+
+	return false;
+}
+
+GameFile::GameFile(str_t filename, size_t size, const GameFile* container, const DatFile* dat, int index)
+{
+	RelPath = filename;
+	split_path(RelPath, Filename, Extension);
+
+	Size = size;
+	Container = container;
+	Dat = dat;
+	Index = index;
 }

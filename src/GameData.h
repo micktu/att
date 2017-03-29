@@ -4,27 +4,29 @@
 
 #include "DatFile.h"
 
+struct GameFile
+{
+	GameFile() = default;
+	GameFile(str_t filename, size_t size = 0, const GameFile* Container = nullptr, const DatFile* dat = nullptr, int index = -1);
+
+	str_t RelPath;
+	str_t Filename;
+	str_t Extension;
+
+	size_t Size;
+
+	bool bIsContainer;
+	std::vector<GameFile> Files;
+	const GameFile* Container;
+	const DatFile* Dat;
+	int Index;
+};
+
 class GameData
 {
-	struct GameFile {
-		wchar_t FullPath[MAX_PATH];
-		wchar_t *Filename;
-		wchar_t *Extension;
-
-		uint32_t Size;
-
-		DatFile* Dat;
-		int Index;
-
-		size_t SizeDir() { return Filename - FullPath - 1; }
-		size_t SizeName() { return Extension - Filename - 1; }
-
-	};
-
 	str_t BasePath;
-	str_vector_t PlainFileNames;
-	str_vector_t DatFileNames;
-	std::vector<DatFile> DatFiles;
+	std::vector<DatFile*> DatFiles;
+	std::vector<GameFile*> GameFiles;
 
 public:
 
@@ -32,10 +34,10 @@ private:
 
 public:
 	GameData() = default;
-
 	GameData(str_t &path);
-	
-	bool Read(str_t path);
 
-	void ListFiles();
+	bool Read(str_t path);
+	bool IsRelevantFile(str_t & filename);
+
+	FORCEINLINE std::vector<GameFile*>& GetGameFiles() { return GameFiles; }
 };

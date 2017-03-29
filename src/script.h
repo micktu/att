@@ -18,7 +18,7 @@
 typedef struct script_message
 {
 	char id[256];
-	
+
 	char jp[256];
 	char en[256];
 	char fr[256];
@@ -44,7 +44,7 @@ typedef struct script_content
 {
 	int num_messages;
 	script_message messages[100];
-	
+
 	int num_scenes;
 	script_scene scenes[100];
 } script_content;

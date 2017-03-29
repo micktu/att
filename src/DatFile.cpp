@@ -1,4 +1,6 @@
 #include "DatFile.h"
+#include "utils.h"
+
 
 bool DatFile::CheckFile(str_t &path)
 {
@@ -11,13 +13,14 @@ bool DatFile::CheckFile(str_t &path)
 	std::ifstream file(path, std::ios::binary);
 	file.read((char*)&magic, 4);
 	file.close();
-	if (DAT_MAGIC != magic) return false;
 
-	return true;
+	return DAT_MAGIC == magic;
 }
 
 DatFile::DatFile(str_t &filename)
 {
+	DatFile();
+
 	Read(filename);
 }
 
@@ -73,7 +76,7 @@ bool DatFile::Read(str_t &filename)
 		entry.Offset = offsets[i];
 		entry.Size = sizes[i];
 		strcpy_s(entry.Extension, extensions[i]);
-		strcpy_s(entry.Name, names[i]);
+		entry.Name = cstr_to_wstr(names[i]);
 		_entries.push_back(entry);
 	}
 
@@ -106,40 +109,38 @@ void DatFile::InjectFile(int index, char * buffer, uint32_t numBytes)
 	file.close();
 }
 
-const DatFileEntry* DatFile::FindFile(const char * name)
+const DatFileEntry* DatFile::FindFile(str_t &name)
 {
-	for (std::vector<DatFileEntry>::iterator it = _entries.begin(); it != _entries.end(); ++it)
+	for (DatFileEntry &entry : _entries)
 	{
-		if (strcmp(name, it->Name) == 0)
+		if (name.compare(entry.Name) == 0)
 		{
-			return &(*it);
+			return &entry;
 		}
 	}
 
 	return nullptr;
 }
 
-void DatFile::ExtractFile(const DatFileEntry* entry, const char * outPath)
+void DatFile::ExtractFile(const DatFileEntry* entry, str_t outPath)
 {
-
 	char* buffer = new char[entry->Size];
 	ReadFile(entry, buffer);
 
-	char* outFilename = new char[MAX_PATH];
-	sprintf_s(outFilename, MAX_PATH, "%s\\%s", outPath, entry->Name);
+	outPath.reserve(MAX_PATH);
+	outPath += L"\\";
+	outPath += entry->Name;
 
-	std::ofstream file(outFilename, std::ios::binary);
+	std::ofstream file(outPath, std::ios::binary);
 	file.write(buffer, entry->Size);
 	file.close();
-
-	delete[] outFilename;
 }
 
-void DatFile::ExtractAll(const char * outPath)
+void DatFile::ExtractAll(str_t &outPath)
 {
-	for (std::vector<DatFileEntry>::iterator it = _entries.begin(); it != _entries.end(); ++it)
+	for (DatFileEntry &entry : _entries)
 	{
-		ExtractFile(&(*it), outPath);
+		ExtractFile(&entry, outPath);
 	}
 }
 

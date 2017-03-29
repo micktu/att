@@ -1,13 +1,11 @@
-// att.cpp : Defines the entry point for the console application.
-//
-
-#include "stdafx.h"
+#include "att.h"
 
 #include <conio.h>
 
-//#include "utils.h"
 #include "GameData.h"
 #include "script.h"
+
+
 /*
 void process_script(DatFileEntry* entry, char* outPath, bool debug)
 {
@@ -49,7 +47,7 @@ void do_export_single(wchar_t* datPath, char* outPath, bool debug)
 	DatFile dat(datPath);
 
 	if (dat.NumEntries() == 0) return;
-	
+
 	char dat_path[MAX_PATH], dat_filename[MAX_PATH];
 	split_path_file(dat_path, dat_filename, datPath);
 	printf("DAT file %s is OK.\n\n", dat_filename);
@@ -105,62 +103,61 @@ void do_export_single(wchar_t* datPath, char* outPath, bool debug)
 
 		printf("Done.\n");
 	}
-	
+
 }
 */
-int main(int argc, char* argv[])
+
+
+
+int wmain(int argc, wchar_t *argv[], wchar_t *envp[])
 {
-	if (argc < 2) return 0;
-
-	size_t chars = 0;
-	wchar_t path[MAX_PATH];
-	mbstowcs_s(&chars, path, argv[1], MAX_PATH);
-
-	GameData gd;
-
-	gd.Read(path);
-	gd.ListFiles();
-
-	while (!_kbhit()) {}
-	return 0;
-
-	/*
-	char* command = argv[1];
-
-	if (strcmp(command, "export") == 0)
+	if (argc < 2)
 	{
-		char* datFullPath = argv[2];
-		char* outDir = argv[3];
+		DoHelp();
+		return 0;
+	}
 
-		//path_vector files = find_files_recursive();
+	str_t verb(argv[1]);
 
-		bool bDebugEnabled = false;
-		if (argc > 4)
+	if (0 == verb.compare(L"list"))
+	{
+		DoList(argc - 2, argv + 2);
+	}
+	else
+	{
+		DoHelp();
+	}
+
+	//while (!_kbhit()) {}
+	return 0;
+}
+
+void DoHelp()
+{
+	wcout << L"\nNieR: Automata Text Tools by @micktu\n";
+	wcout << L"\n  Available commands:\n";
+	wcout << L"\n  att list <PATH> [FILTER]\n";
+	wcout << L"      Lists all files in a directory or .dat container specified by <PATH>.\n";
+}
+
+void DoList(int argc, wchar_t * argv[])
+{
+	str_t path(argv[0]);
+	GameData gd;
+	gd.Read(path);
+
+	for (GameFile* gf : gd.GetGameFiles())
+	{
+		//if (gf->bIsContainer && gf->Files.size() < 1) continue;
+
+		wcout << gf->Filename << L"\n";
+
+		for (GameFile& gfd : gf->Files)
 		{
-			bDebugEnabled = strcmp(argv[4], "debug") == 0;
+			wcout << L"- " << gfd.Filename << L"\n";
 		}
 
-		//do_export(datFullPath, outDir, bDebugEnabled);
-		return 0;
+		//if (gf->bIsContainer) wcout << L"\n";
 	}
-
-	if (strcmp(command, "extract") == 0)
-	{
-		char* filename = argv[2];
-		char* outPath = argv[3];
-
-		//do_extract(filename, outPath);
-		return 0;
-	}
-
-	if (strcmp(command, "list") == 0)
-	{
-		char* filename = argv[2];
-
-		//do_list(filename);
-		return 0;
-	}
-	*/
-	return 0;
 }
 

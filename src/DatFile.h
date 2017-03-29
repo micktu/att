@@ -25,7 +25,7 @@ struct DatFileEntry
 {
 	uint32_t Index;
 	dat_ext_t Extension;
-	dat_name_t Name;
+	str_t Name;
 	dat_size_t Size;
 	dat_offset_t Offset;
 };
@@ -42,7 +42,7 @@ private:
 
 public:
 	static bool CheckFile(str_t &path);
-	
+
 	DatFile() = default;
 	DatFile(const DatFile &obj) = default;
 	DatFile(str_t &filename);
@@ -50,11 +50,14 @@ public:
 	bool Read(str_t &filename);
 	void ReadFile(const DatFileEntry* entry, char* buffer);
 	void InjectFile(int index, char * buffer, uint32_t numBytes);
-	const DatFileEntry* FindFile(const char* name);
-	void ExtractFile(const DatFileEntry* entry, const char * outPath);
-	void ExtractAll(const char* outPath);
+	const DatFileEntry* FindFile(str_t &name);
+	void ExtractFile(const DatFileEntry* entry, str_t outPath);
+	void ExtractAll(str_t &outPath);
 
 	FORCEINLINE str_t GetFilename() const { return _filename; }
 	FORCEINLINE size_t NumEntries() const { return _entries.size(); }
 	FORCEINLINE DatFileEntry* operator[](int index) { return &_entries[index]; }
+
+	auto begin() { return _entries.begin(); }
+	auto end() { return _entries.end(); }
 };

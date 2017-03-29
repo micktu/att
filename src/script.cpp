@@ -21,10 +21,11 @@ script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 		{
 		case STATE_IDLE:
 		case STATE_COLLECTING_STRINGS:
-			if (opcode == OP_STRING) {
+			if (opcode == OP_STRING)
+			{
 				int index = GETARG_Bx(code);
 				if (counter < 1) message_index = index;
-				
+
 				messages[counter++] = irep->pool[index];
 				state = STATE_COLLECTING_STRINGS;
 
@@ -272,7 +273,7 @@ char* script_import(const char* bin, const char* filename, int* size)
 	mrb_irep* irep = mrb_read_irep(mrb, (uint8_t*)bin);
 
 	script_content* content = collect_dialogue(mrb, irep);
-	
+
 	script_message* message = script_find_messsage(content, "M0010_S0005_S0000_101_a2b");
 
 	const char* val = mrb_str_to_cstr(mrb, message->irep->pool[message->index + 1]);
@@ -283,7 +284,7 @@ char* script_import(const char* bin, const char* filename, int* size)
 	size_t outSize;
 	uint8_t* buffer = new uint8_t[1024 * 1024];
 	mrb_dump_irep(mrb, irep, 0, &buffer, &outSize);
-	
+
 	mrb_close(mrb);
 
 	char* outBuffer = new char[outSize];

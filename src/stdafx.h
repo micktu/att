@@ -1,30 +1,22 @@
-// stdafx.h : include file for standard system include files,
-// or project specific include files that are used frequently, but
-// are changed infrequently
-//
-
 #pragma once
 
 #include "targetver.h"
 
-struct IUnknown; // Clang hack
-#include <windows.h>
-
-#include <stdio.h>
-#include <stdint.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <string>
+
+#include <stdio.h>
+#include <stdint.h>
 #include <wchar.h>
 
-
-using namespace std::string_literals;
+struct IUnknown; // Clang hack
+#include <windows.h>
 
 #define FORCEINLINE __forceinline
+#define wcout std::wcout
 
-#define cout std::wcout
-#define str_t std::wstring
-#define str_vector_t std::vector<str_t>
-
-// TODO: reference additional headers your program requires here
+using namespace std::string_literals;
+using str_t = std::wstring;
+using str_vector_t = std::vector<str_t>;
