@@ -2,10 +2,9 @@
 
 #include "stdafx.h"
 
+
 #define DAT_MAGIC '\x00TAD'
-
 typedef uint32_t dat_offset_t, dat_size_t;
-
 typedef char dat_name_t[MAX_PATH];
 typedef char dat_ext_t[4];
 

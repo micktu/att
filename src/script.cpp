@@ -1,5 +1,6 @@
 #include "script.h"
 
+
 script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 {
 	script_content* content = new script_content;

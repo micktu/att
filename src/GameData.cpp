@@ -3,9 +3,9 @@
 
 #include <Pathcch.h>;
 
+
 GameData::GameData(str_t &path)
 {
-	GameData();
 	Read(path);
 }
 
@@ -21,7 +21,7 @@ bool GameData::Read(str_t path)
 	GameFiles.clear();
 	GameFiles.reserve(0x1000);
 
-	if (0 == (FILE_ATTRIBUTE_DIRECTORY & attributes))
+	if ((FILE_ATTRIBUTE_DIRECTORY & attributes) == 0)
 	{
 		if (!DatFile::CheckFile(path)) return false;
 		DatFiles.emplace_back(new DatFile(path));
@@ -29,8 +29,8 @@ bool GameData::Read(str_t path)
 	}
 
 	str_vector_t files = find_files(path);
-	path += L"\\";
 
+	path += L"\\";
 	wchar_t pathTemp[MAX_PATH];
 	for (str_t &filename : files)
 	{
@@ -51,6 +51,7 @@ bool GameData::Read(str_t path)
 
 			gf->Dat = dat;
 			gf->bIsContainer = true;
+			gf->Files.reserve(dat->NumEntries());
 
 			int i = 0;
 			for (DatFileEntry &entry : *dat)

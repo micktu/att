@@ -2,6 +2,7 @@
 #include <Shlobj.h>
 
 
+#define is_sep(p) (*p == '\\' || *p == '/')
 void split_path(const wchar_t *path, const wchar_t **name, const wchar_t **ext)
 {
 	*name = nullptr;
