@@ -1,52 +1,58 @@
 #include "utils.h"
-#include <Shlobj.h>
+#include <Shlwapi.h>
+#include <ShlObj.h>
+#include <PathCch.h>
 
 
-#define is_sep(p) (*p == '\\' || *p == '/')
-void split_path(const wchar_t *path, const wchar_t **name, const wchar_t **ext)
+static wchar_t PATH_BUFFER[MAX_PATH];
+
+str_t path_strip_filename(str_t filename)
 {
-	*name = nullptr;
-	*ext = nullptr;
-
-	if (path == nullptr) return;
-
-	size_t len = wcslen(path);
-	const wchar_t *p = path + len - 1;
-
-	if (is_sep(p)) p--;
-
-	while (p >= path)
-	{
-		if (is_sep(p))
-		{
-			*name = p + 1;
-			break;
-		}
-
-		if (*p == '.' && *ext == nullptr && p > path && !is_sep(p - 1))
-		{
-			*ext = p + 1;
-		}
-
-		p--;
-	}
-
-	if (*name == nullptr) *name = path;
-	if (*ext == nullptr) *ext = path + len;
+	filename.copy(PATH_BUFFER, MAX_PATH, 0);
+	PathCchRemoveFileSpec(PATH_BUFFER, MAX_PATH);
+	return str_t(PATH_BUFFER);
 }
 
 void split_path(const str_t &path, str_t &name, str_t &ext)
 {
-	const wchar_t *cname, *cext;
-	split_path(path.c_str(), &cname, &cext);
+	wchar_t *cext;
+	wchar_t *cname = PathFindFileName(path.c_str());
+	PathCchFindExtension(cname, MAX_PATH, &cext);
+
 	name = str_t(cname);
 	ext = str_t(cext);
+}
+
+str_t strip_slash(const str_t &path)
+{
+	//path.copy(PATH_BUFFER, MAX_PATH);
+	wcscpy_s(PATH_BUFFER, MAX_PATH, path.c_str());
+	size_t size = path.size();
+	if (S_OK == PathCchRemoveBackslash(PATH_BUFFER, MAX_PATH))
+	{
+		return str_t(PATH_BUFFER);
+	}
+
+	return path;
+}
+
+str_t add_slash(const str_t &path)
+{
+	//path.copy(PATH_BUFFER, MAX_PATH);
+	wcscpy_s(PATH_BUFFER, path.c_str());
+	if (S_OK == PathCchAddBackslash(PATH_BUFFER, MAX_PATH))
+	{
+		return str_t(PATH_BUFFER);
+	}
+
+	return path;
 }
 
 str_vector_t find_files_recursive(str_t path, int pathSize = -1)
 {
 	if (pathSize < 0) pathSize = path.size();
-	path += L"\\";
+	path = add_slash(path);
+	
 	str_t dirMask = path + L"*";
 
 	WIN32_FIND_DATA ffd;
@@ -83,14 +89,7 @@ str_vector_t find_files_recursive(str_t path, int pathSize = -1)
 
 str_vector_t find_files(str_t path)
 {
-	str_vector_t files;
-
-	wchar_t* last = &path.back();
-	if (*last == '\\') *last = 0;
-
-	bool bIsDirectory = GetFileAttributes(path.c_str()) & FILE_ATTRIBUTE_DIRECTORY;
-	if (!bIsDirectory) return files;
-
+	if (!is_dir(path)) return str_vector_t();
 	return find_files_recursive(path);
 }
 

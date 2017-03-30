@@ -1,8 +1,7 @@
 #include "GameData.h"
 #include "utils.h"
 
-#include <Pathcch.h>;
-
+constexpr wchar_t GameData::TEXT_EXTENSIONS[][5];
 
 GameData::GameData(str_t &path)
 {
@@ -30,8 +29,7 @@ bool GameData::Read(str_t path)
 
 	str_vector_t files = find_files(path);
 
-	path += L"\\";
-	wchar_t pathTemp[MAX_PATH];
+	path = add_slash(path);
 	for (str_t &filename : files)
 	{
 		if (!IsRelevantFile(filename)) continue;
@@ -45,9 +43,7 @@ bool GameData::Read(str_t path)
 			DatFile *dat = new DatFile(fullPath);
 			DatFiles.emplace_back(dat);
 
-			filename.copy(pathTemp, MAX_PATH, 0);
-			PathCchRemoveFileSpec(pathTemp, MAX_PATH);
-			str_t relPath(pathTemp);
+			str_t relPath = path_strip_filename(filename);
 
 			gf->Dat = dat;
 			gf->bIsContainer = true;
@@ -58,10 +54,8 @@ bool GameData::Read(str_t path)
 			{
 				if (!IsRelevantFile(entry.Name)) continue;
 
-				str_t relName = relPath + L"\\";
-				relName += entry.Name;
-
-				gf->Files.emplace_back(relName, entry.Size, gf, dat, i);
+				str_t relName = add_slash(path);
+				gf->Files.emplace_back(relName + entry.Name, entry.Size, gf, dat, i);
 				++i;
 			}
 
@@ -72,17 +66,13 @@ bool GameData::Read(str_t path)
 	return true;
 }
 
-static const str_vector_t RELEVANT_EXTENSIONS = { L".dat", L".bin", L".tmd", L".smd", L".txt" };
 bool GameData::IsRelevantFile(str_t &filename)
 {
 	return true;
 
-	for (const str_t &ext : RELEVANT_EXTENSIONS)
+	for (const str_t &ext : TEXT_EXTENSIONS)
 	{
-		if (0 == filename.compare(filename.length() - 4, filename.length(), ext))
-		{
-			return true;
-		}
+		if (ext_equals(filename, ext)) return true;
 	}
 
 	return false;

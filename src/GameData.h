@@ -24,6 +24,8 @@ struct GameFile
 
 class GameData
 {
+	static constexpr wchar_t TEXT_EXTENSIONS[][5] = { L".dat", L".bin", L".tmd", L".smd", L".txt" };
+
 	str_t BasePath;
 	std::vector<DatFile*> DatFiles;
 	std::vector<GameFile*> GameFiles;

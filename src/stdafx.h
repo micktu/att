@@ -2,17 +2,17 @@
 
 #include "targetver.h"
 
+#include <cstdio>
+#include <cstdint>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <string>
-
-#include <stdio.h>
-#include <stdint.h>
 #include <wchar.h>
 
 struct IUnknown; // Clang hack
 #include <windows.h>
+
 
 #define FORCEINLINE __forceinline
 #define wcout std::wcout
