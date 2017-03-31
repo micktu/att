@@ -1,6 +1,10 @@
 #include "DatFile.h"
 #include "utils.h"
 
+DatFileEntry::DatFileEntry(uint32_t index, str_t name, dat_ext_t extension, dat_size_t size, dat_offset_t offset) : Index(index), Name(name), Size(size), Offset(Offset)
+{
+	strcpy_s(Extension, extension);
+}
 
 bool DatFile::CheckFile(str_t &path)
 {
@@ -17,15 +21,14 @@ bool DatFile::CheckFile(str_t &path)
 	return DAT_MAGIC == magic;
 }
 
-DatFile::DatFile(const str_t &filename)
+DatFile::DatFile(const str_t &filename) : DatFile()
 {
-	DatFile();
 	Read(filename);
 }
 
 bool DatFile::Read(const str_t &filename)
 {
-	_filename = filename;
+	_path = filename;
 	_entries.clear();
 
 	std::ifstream file(filename, std::ios::binary);
@@ -68,15 +71,9 @@ bool DatFile::Read(const str_t &filename)
 
 	// Build entries
 	_entries.reserve(numEntries);
-	DatFileEntry entry;
 	for (int i = 0; i < numEntries; i++)
 	{
-		entry.Index = i;
-		entry.Offset = offsets[i];
-		entry.Size = sizes[i];
-		strcpy_s(entry.Extension, extensions[i]);
-		entry.Name = cstr_to_wstr(names[i]);
-		_entries.push_back(entry);
+		_entries.emplace_back(i, cstr_to_wstr(names[i]), extensions[i], sizes[i], offsets[i]);
 	}
 
 	return true;
@@ -84,7 +81,7 @@ bool DatFile::Read(const str_t &filename)
 
 void DatFile::ReadFile(const DatFileEntry* entry, char* buffer)
 {
-	std::ifstream file(_filename, std::ios::binary);
+	std::ifstream file(_path, std::ios::binary);
 
 	file.seekg(entry->Offset);
 	file.read(buffer, entry->Size);
@@ -93,7 +90,7 @@ void DatFile::ReadFile(const DatFileEntry* entry, char* buffer)
 
 void DatFile::InjectFile(int index, char * buffer, uint32_t numBytes)
 {
-	std::ofstream file(_filename, std::ios::binary);
+	std::ofstream file(_path, std::ios::binary);
 
 	file.seekp(0, std::ios::end);
 	uint32_t offset = (uint32_t)file.tellp();
@@ -126,7 +123,6 @@ void DatFile::ExtractFile(const DatFileEntry* entry, str_t outPath)
 	char* buffer = new char[entry->Size];
 	ReadFile(entry, buffer);
 
-	outPath.reserve(MAX_PATH);
 	outPath += L"\\";
 	outPath += entry->Name;
 

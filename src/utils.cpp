@@ -13,14 +13,22 @@ str_t path_strip_filename(str_t filename)
 	return str_t(PATH_BUFFER);
 }
 
-void split_path(const str_t &path, str_t &name, str_t &ext)
+str_t path_normalize(str_t path)
+{
+	GetFullPathName(path.c_str(), MAX_PATH, PATH_BUFFER, nullptr);
+	//PathCchCanonicalize(PATH_BUFFER, MAX_PATH, path.c_str());
+	return str_t(PATH_BUFFER);
+}
+
+void split_path(const str_t &str, str_t &path, str_t &name, str_t &ext)
 {
 	wchar_t *cext;
-	wchar_t *cname = PathFindFileName(path.c_str());
+	wchar_t *cname = PathFindFileName(str.c_str());
 	PathCchFindExtension(cname, MAX_PATH, &cext);
 
 	name = str_t(cname);
 	ext = str_t(cext);
+	path = str.substr(0, str.length() - name.length());
 }
 
 str_t strip_slash(const str_t &path)
@@ -118,8 +126,9 @@ bool ext_equals(const str_t & filename, const wchar_t * ext)
 	return wcs_as_long(ext) == wcs_as_long(filename.c_str() + filename.length() - 4);
 }
 
-std::ifstream::pos_type get_file_size(str_t filename)
+size_t get_file_size(const str_t& filename)
 {
 	std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
 	return in.tellg();
+	in.close();
 }

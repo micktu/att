@@ -4,7 +4,7 @@
 
 #include "GameData.h"
 #include "script.h"
-
+#include "utils.h"
 
 /*
 void process_script(DatFileEntry* entry, char* outPath, bool debug)
@@ -141,44 +141,49 @@ void DoHelp()
 
 void DoList(int &argc, wchar_t ** &argv)
 {
-	str_t path(argv[0]);
+	str_t path = add_slash(path_normalize(argv[0]));
+
 	GameData gd(path);
+	ReadGameData(gd, argc > 1 ? argv[1] : L"", L"Listing");
 
-	gd.Read(argc > 1 ? argv[1] : L"");
-
-	for (GameFile* gf : gd)
+	for (GameFile& gf : gd)
 	{
-		//if (gf->bIsContainer && gf->Files.size() < 1) continue;
-
-		wcout << gf->Filename << L"\n";
-
-		for (GameFile& gfd : gf->Files)
-		{
-			wcout << L"- " << gfd.Filename << std::endl;
-		}
-
-		//if (gf->bIsContainer) wcout << L"\n";
+		wcout << gf.Path << gf.Filename << std::endl;
 	}
 }
 
 void DoExtract(int &argc, wchar_t ** &argv)
 {
-	str_t path(argv[0]);
+	str_t path = add_slash(path_normalize(argv[0]));
+	str_t outPath = add_slash(path_normalize(argv[1]));
+
 	GameData gd(path);
+	ReadGameData(gd, argc > 2 ? argv[2] : L"", L"Extracting");
 
-	gd.Read(L"data");
+	std::vector<DatFile>& datFiles = gd.GetDatFiles();
 
-	for (GameFile* gf : GameData(path))
+	for (GameFile& gf : gd)
 	{
-		//if (gf->bIsContainer && gf->Files.size() < 1) continue;
-
-		wcout << gf->Filename << L"\n";
-
-		for (GameFile& gfd : gf->Files)
+		if (gf.DatIndex != ~0)
 		{
-			wcout << L"- " << gfd.Filename << std::endl;
+			str_t outDir = outPath + add_slash(path_strip_filename(strip_slash(gf.Path)));
+			create_dir_recursive(outDir);
+			DatFile& dat = datFiles[gf.DatIndex];
+			dat.ExtractFile(dat[gf.IndexInDat], outDir);
 		}
-
-		//if (gf->bIsContainer) wcout << L"\n";
 	}
+}
+
+void ReadGameData(GameData& gd, const str_t filter, const str_t verb)
+{
+	size_t numFiles = gd.GetFilenames().size();
+	wcout << L"Checking " << numFiles << L" files in " << gd.GetBasePath() << L"... ";
+	gd.Read(filter);
+
+	size_t numGameFiles = gd.GetGameFiles().size();
+	size_t numDatFiles = gd.GetDatFiles().size();
+	wcout << L"Done." << std::endl;
+	if (!verb.empty()) wcout << verb << L" ";
+	wcout << numGameFiles << L" files in " << numDatFiles << L" archives." << std::endl;
+	wcout << std::endl;
 }

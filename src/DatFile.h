@@ -22,6 +22,8 @@ struct dat_header
 
 struct DatFileEntry
 {
+	DatFileEntry(uint32_t index, str_t name, dat_ext_t extension, dat_size_t size, dat_offset_t offset);
+
 	uint32_t Index;
 	dat_ext_t Extension;
 	str_t Name;
@@ -31,7 +33,7 @@ struct DatFileEntry
 
 class DatFile
 {
-	str_t _filename;
+	str_t _path;
 	std::vector<DatFileEntry> _entries;
 	dat_header _header;
 
@@ -44,7 +46,7 @@ public:
 
 	DatFile() = default;
 	DatFile(const DatFile &obj) = default;
-	DatFile(const str_t &filename);
+	DatFile(const str_t &path);
 
 	bool Read(const str_t &filename);
 	void ReadFile(const DatFileEntry* entry, char* buffer);
@@ -53,7 +55,7 @@ public:
 	void ExtractFile(const DatFileEntry* entry, str_t outPath);
 	void ExtractAll(str_t &outPath);
 
-	FORCEINLINE str_t GetFilename() const { return _filename; }
+	FORCEINLINE str_t GetPath() const { return _path; }
 	FORCEINLINE size_t NumEntries() const { return _entries.size(); }
 	FORCEINLINE DatFileEntry* operator[](int index) { return &_entries[index]; }
 
