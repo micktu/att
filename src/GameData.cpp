@@ -1,81 +1,116 @@
 #include "GameData.h"
 #include "utils.h"
 
-constexpr wchar_t GameData::TEXT_EXTENSIONS[][5];
+
+const ext_vector_t GameData::DAT_EXTENSIONS { L".dat", L".dtt", L".eff", L".evn" };
+const ext_vector_t GameData::TEXT_EXTENSIONS { L".bin", L".tmd", L".smd", L".txt" };
 
 GameData::GameData(str_t &path)
 {
-	Read(path);
+	GameData();
+	BasePath = path;
 }
 
-bool GameData::Read(str_t path)
+bool GameData::Read(str_t filter)
 {
-	uint32_t attributes = GetFileAttributes(path.c_str());
+	uint32_t attributes = GetFileAttributes(BasePath.c_str());
 	if (INVALID_FILE_ATTRIBUTES == attributes) return false;
 
-	BasePath = path;
+	str_t path = BasePath;
 
 	DatFiles.clear();
-	DatFiles.reserve(0x1000);
 	GameFiles.clear();
-	GameFiles.reserve(0x1000);
 
 	if ((FILE_ATTRIBUTE_DIRECTORY & attributes) == 0)
 	{
 		if (!DatFile::CheckFile(path)) return false;
-		DatFiles.emplace_back(new DatFile(path));
+		ProcessFile(path, path, filter);
 		return true;
 	}
 
-	str_vector_t files = find_files(path);
-
 	path = add_slash(path);
+	str_vector_t files = find_files(path);
+	GameFiles.reserve(files.size());
+	DatFiles.reserve(files.size());
 	for (str_t &filename : files)
 	{
-		if (!IsRelevantFile(filename)) continue;
-
-		str_t fullPath = path + filename;
-		GameFile* gf = new GameFile(filename, get_file_size(fullPath));
-		GameFiles.emplace_back(gf);
-
-		if (DatFile::CheckFile(fullPath))
-		{
-			DatFile *dat = new DatFile(fullPath);
-			DatFiles.emplace_back(dat);
-
-			str_t relPath = path_strip_filename(filename);
-
-			gf->Dat = dat;
-			gf->bIsContainer = true;
-			gf->Files.reserve(dat->NumEntries());
-
-			int i = 0;
-			for (DatFileEntry &entry : *dat)
-			{
-				if (!IsRelevantFile(entry.Name)) continue;
-
-				str_t relName = add_slash(path);
-				gf->Files.emplace_back(relName + entry.Name, entry.Size, gf, dat, i);
-				++i;
-			}
-
-			continue;
-		}
+		ProcessFile(path, filename, filter);
 	}
 
 	return true;
 }
 
-bool GameData::IsRelevantFile(str_t &filename)
+void GameData::ProcessFile(const str_t &path, const str_t &filename, const str_t &filter)
 {
-	return true;
+	if (!IsRelevantFile(filename, filter)) return;
 
-	for (const str_t &ext : TEXT_EXTENSIONS)
+	str_t fullPath = path + filename;
+	GameFile* gf(new GameFile(filename, get_file_size(fullPath)));
+	GameFiles.emplace_back(gf);
+
+	if (!IsDatFile(fullPath)) return;
+
+	DatFile *dat = new DatFile(fullPath);
+	DatFiles.emplace_back(dat);
+
+	str_t relPath = path_strip_filename(filename);
+
+	gf->Dat = dat;
+	gf->bIsContainer = true;
+	gf->Files.reserve(dat->NumEntries());
+
+	int i = 0;
+	for (DatFileEntry &entry : *dat)
 	{
-		if (ext_equals(filename, ext)) return true;
+		if (!IsRelevantFile(entry.Name, filter)) continue;
+
+		relPath = add_slash(relPath);
+		gf->Files.emplace_back(relPath + entry.Name, entry.Size, gf, dat, i);
+		++i;
+	}
+}
+
+bool GameData::CheckExtension(const str_t &filename, const ext_vector_t &list) const
+{
+	for (wchar_t *ext : list)
+	{
+		//if (ext_equals(filename, ext)) return true;
+		if (filename.compare(filename.length() - 4, 4, ext, 4) == 0) return true;
 	}
 
 	return false;
+}
+
+bool GameData::IsDatFile(const str_t &filename) const
+{
+	return CheckExtension(filename, DAT_EXTENSIONS);
+}
+
+bool GameData::IsTextFile(const str_t &filename) const
+{
+	return CheckExtension(filename, TEXT_EXTENSIONS);
+}
+
+bool GameData::IsRelevantFile(const str_t &filename, str_t filter) const
+{
+	if (filter.empty()) return true;
+
+	std::transform(filter.begin(), filter.end(), filter.begin(), ::tolower);
+	
+	if (filter.compare(L"data"))
+	{
+		return IsDatFile(filename);
+	}
+	if (filter.compare(L"text"))
+	{
+		return IsTextFile(filename);
+	}
+	else
+	{
+		if (filter[0] != '.') filter = L"." + filter;
+		//return ext_equals(filename, filter.c_str());
+		return filename.compare(filename.length() - 4, 4, filter, 4) == 0;
+	}
 }
 
 GameFile::GameFile(str_t filename, size_t size, const GameFile* container, const DatFile* dat, int index)

@@ -50,8 +50,7 @@ str_t add_slash(const str_t &path)
 
 str_vector_t find_files_recursive(str_t path, int pathSize = -1)
 {
-	if (pathSize < 0) pathSize = path.size();
-	path = add_slash(path);
+	if (pathSize < 0) pathSize = path.size() - 1;
 	
 	str_t dirMask = path + L"*";
 
@@ -73,6 +72,7 @@ str_vector_t find_files_recursive(str_t path, int pathSize = -1)
 		str_t filename = path + name;
 		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 		{
+			filename += '\\';
 			str_vector_t inner = find_files_recursive(filename, pathSize);
 			files.insert(files.end(), inner.begin(), inner.end());
 			continue;

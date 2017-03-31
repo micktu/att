@@ -17,14 +17,13 @@ bool DatFile::CheckFile(str_t &path)
 	return DAT_MAGIC == magic;
 }
 
-DatFile::DatFile(str_t &filename)
+DatFile::DatFile(const str_t &filename)
 {
 	DatFile();
-
 	Read(filename);
 }
 
-bool DatFile::Read(str_t &filename)
+bool DatFile::Read(const str_t &filename)
 {
 	_filename = filename;
 	_entries.clear();

@@ -4,7 +4,7 @@
 
 #define is_dir(path) (GetFileAttributes(path.c_str()) & FILE_ATTRIBUTE_DIRECTORY)
 #define wstr_as_long(s) (*(uint64_t*)s)
-#define ext_equals(filename, ext) (wstr_as_long(filename.c_str() + filename.length() - 4) != wstr_as_long(ext.c_str()))
+#define ext_equals(filename, ext) (wstr_as_long(filename.c_str() + filename.length() - 4) == wstr_as_long(ext))
 
 str_t path_strip_filename(str_t filename);
 void split_path(const str_t & path, str_t & name, str_t & ext);

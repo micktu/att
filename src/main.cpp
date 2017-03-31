@@ -108,7 +108,6 @@ void do_export_single(wchar_t* datPath, char* outPath, bool debug)
 */
 
 
-
 int wmain(int argc, wchar_t *argv[], wchar_t *envp[])
 {
 	if (argc < 2)
@@ -117,16 +116,16 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[])
 		return 0;
 	}
 
-	str_t verb(argv[1]);
-
-	if (0 == verb.compare(L"list"))
-	{
-		DoList(argc - 2, argv + 2);
-	}
-	else
+	auto it = commands.find(argv[1]);
+	if (it == commands.end())
 	{
 		DoHelp();
+		return 0;
 	}
+
+	int ac = argc - 2;
+	wchar_t ** av = argv + 2;
+	it->second(ac, av);
 
 	//while (!_kbhit()) {}
 	return 0;
@@ -134,19 +133,20 @@ int wmain(int argc, wchar_t *argv[], wchar_t *envp[])
 
 void DoHelp()
 {
-	wcout << L"\nNieR: Automata Text Tools by @micktu\n";
-	wcout << L"\n  Available commands:\n";
-	wcout << L"\n  att list <PATH> [FILTER]\n";
-	wcout << L"      Lists all files in a directory or .dat container specified by <PATH>.\n";
+	wcout << std::endl << L"NieR: Automata Text Tools by @micktu" << std::endl;
+	wcout << std::endl << L"  Available commands:" << std::endl;
+	wcout << std::endl << L"  att list <PATH> [FILTER]" << std::endl;
+	wcout << L"      Lists all files in a directory or .dat container specified by <PATH>." << std::endl;
 }
 
-void DoList(int argc, wchar_t * argv[])
+void DoList(int &argc, wchar_t ** &argv)
 {
 	str_t path(argv[0]);
-	GameData gd;
-	gd.Read(path);
+	GameData gd(path);
 
-	for (GameFile* gf : gd.GetGameFiles())
+	gd.Read(argc > 1 ? argv[1] : L"");
+
+	for (GameFile* gf : gd)
 	{
 		//if (gf->bIsContainer && gf->Files.size() < 1) continue;
 
@@ -154,10 +154,31 @@ void DoList(int argc, wchar_t * argv[])
 
 		for (GameFile& gfd : gf->Files)
 		{
-			wcout << L"- " << gfd.Filename << L"\n";
+			wcout << L"- " << gfd.Filename << std::endl;
 		}
 
 		//if (gf->bIsContainer) wcout << L"\n";
 	}
 }
 
+void DoExtract(int &argc, wchar_t ** &argv)
+{
+	str_t path(argv[0]);
+	GameData gd(path);
+
+	gd.Read(L"data");
+
+	for (GameFile* gf : GameData(path))
+	{
+		//if (gf->bIsContainer && gf->Files.size() < 1) continue;
+
+		wcout << gf->Filename << L"\n";
+
+		for (GameFile& gfd : gf->Files)
+		{
+			wcout << L"- " << gfd.Filename << std::endl;
+		}
+
+		//if (gf->bIsContainer) wcout << L"\n";
+	}
+}

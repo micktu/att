@@ -24,7 +24,8 @@ struct GameFile
 
 class GameData
 {
-	static constexpr wchar_t TEXT_EXTENSIONS[][5] = { L".dat", L".bin", L".tmd", L".smd", L".txt" };
+	static const ext_vector_t DAT_EXTENSIONS;
+	static const ext_vector_t TEXT_EXTENSIONS;
 
 	str_t BasePath;
 	std::vector<DatFile*> DatFiles;
@@ -38,8 +39,16 @@ public:
 	GameData() = default;
 	GameData(str_t &path);
 
-	bool Read(str_t path);
-	bool IsRelevantFile(str_t & filename);
+	bool Read(str_t filter);
 
-	FORCEINLINE std::vector<GameFile*>& GetGameFiles() { return GameFiles; }
+	FORCEINLINE void GameData::ProcessFile(const str_t &path, const str_t &filename, const str_t &filter);
+	bool CheckExtension(const str_t &filename, const ext_vector_t & list) const;
+	FORCEINLINE bool IsDatFile(const str_t &filename) const;
+	FORCEINLINE bool IsTextFile(const str_t &filename) const;
+	FORCEINLINE bool IsRelevantFile(const str_t &filename, str_t filter) const;
+
+	FORCEINLINE GameFile* operator[](int index) const { &GameFiles[index]; }
+
+	auto begin() { return GameFiles.begin(); }
+	auto end() { return GameFiles.end(); }
 };

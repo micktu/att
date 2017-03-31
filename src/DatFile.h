@@ -44,9 +44,9 @@ public:
 
 	DatFile() = default;
 	DatFile(const DatFile &obj) = default;
-	DatFile(str_t &filename);
+	DatFile(const str_t &filename);
 
-	bool Read(str_t &filename);
+	bool Read(const str_t &filename);
 	void ReadFile(const DatFileEntry* entry, char* buffer);
 	void InjectFile(int index, char * buffer, uint32_t numBytes);
 	const DatFileEntry* FindFile(str_t &name);
