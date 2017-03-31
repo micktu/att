@@ -113,6 +113,11 @@ str_t cstr_to_wstr(const char* cstr)
 	return wstr;
 }
 
+bool ext_equals(const str_t & filename, const wchar_t * ext)
+{
+	return wcs_as_long(ext) == wcs_as_long(filename.c_str() + filename.length() - 4);
+}
+
 std::ifstream::pos_type get_file_size(str_t filename)
 {
 	std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);

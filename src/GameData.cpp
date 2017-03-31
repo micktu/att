@@ -74,8 +74,7 @@ bool GameData::CheckExtension(const str_t &filename, const ext_vector_t &list) c
 {
 	for (wchar_t *ext : list)
 	{
-		//if (ext_equals(filename, ext)) return true;
-		if (filename.compare(filename.length() - 4, 4, ext, 4) == 0) return true;
+		if (ext_equals(filename, ext)) return true;
 	}
 
 	return false;
@@ -97,19 +96,18 @@ bool GameData::IsRelevantFile(const str_t &filename, str_t filter) const
 
 	std::transform(filter.begin(), filter.end(), filter.begin(), ::tolower);
 	
-	if (filter.compare(L"data"))
+	if (filter.compare(L"data") == 0)
 	{
 		return IsDatFile(filename);
 	}
-	if (filter.compare(L"text"))
+	if (filter.compare(L"text") == 0)
 	{
 		return IsTextFile(filename);
 	}
 	else
 	{
 		if (filter[0] != '.') filter = L"." + filter;
-		//return ext_equals(filename, filter.c_str());
-		return filename.compare(filename.length() - 4, 4, filter, 4) == 0;
+		return ext_equals(filename, filter.c_str());
 	}
 }
 
