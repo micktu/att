@@ -52,8 +52,10 @@ void GameData::ProcessFile(const str_t &filename, const str_t &filter)
 		int i = 0;
 		for (DatFileEntry &entry : df)
 		{
-			if (!IsRelevantFile(entry.Name, filter)) continue;
-			GameFiles.emplace_back(relPath + entry.Name, GameFiles.size(), entry.Size, datIndex, i);
+			if (IsRelevantFile(entry.Name, filter))
+			{
+				GameFiles.emplace_back(relPath + entry.Name, GameFiles.size(), entry.Size, datIndex, i);
+			}
 			++i;
 		}
 

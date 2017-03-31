@@ -1,7 +1,7 @@
 #include "DatFile.h"
 #include "utils.h"
 
-DatFileEntry::DatFileEntry(uint32_t index, str_t name, dat_ext_t extension, dat_size_t size, dat_offset_t offset) : Index(index), Name(name), Size(size), Offset(Offset)
+DatFileEntry::DatFileEntry(uint32_t index, str_t name, dat_ext_t extension, dat_size_t size, dat_offset_t offset) : Index(index), Name(name), Size(size), Offset(offset)
 {
 	strcpy_s(Extension, extension);
 }
