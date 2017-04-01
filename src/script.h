@@ -94,7 +94,7 @@ ScriptContent* script_extract(const char* bin);
 
 void script_export(ScriptContent* content, str_t filename);
 
-void script_export_debug(const char* bin, const char* out_filename);
+void script_dump_debug(const char* bin, str_t out_filename, ScriptContent* content = nullptr);
 
 char* script_import(const char* bin, const char* filename, int* size);
 

@@ -7,7 +7,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 	ScriptContent* content = new ScriptContent();
 
 	int messageIndex;
-	std::vector<mrb_value*> messages(8);
+	std::vector<mrb_value*> messages;
 
 	TextState state = Idle;
 
@@ -82,9 +82,17 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 
 	for (int i = 0; i < irep->slen; i++)
 	{
-		std::string sym = mrb_sym2name(mrb, irep->syms[i]);
+		const char* s = mrb_sym2name(mrb, irep->syms[i]);
 
-		if (!bFound && sym.find("mess") != -1)
+		if (s == nullptr)
+		{
+			wcout << std::endl << L"WARNING: unnamed symbol @ " << i << L" ";
+			continue;
+		}
+
+		std::string sym(s);
+
+		if (!bFound && (sym.find("mess") != -1 || sym.find("podtalk") != -1 || sym.find("sele_ex") != -1))
 		{
 			bFound = true;
 			continue;
@@ -139,7 +147,16 @@ ScriptContent* script_extract(const char* bin)
 
 void script_export(ScriptContent* content, str_t filename)
 {
-	if (content->Messages.empty()) return;
+	if (content->Scenes.empty())
+	{
+		if (!content->Messages.empty())
+		{
+			wcout << L"Warning: " << content->Messages.size() << L" messages, ";
+			wcout << content->Scenes.size() << L" scenes in " << filename;
+		}
+
+		return;
+	}
 
 	std::ofstream file(filename);
 
@@ -180,34 +197,54 @@ void script_export(ScriptContent* content, str_t filename)
 	file.close();
 }
 
-void fprint_irep(mrb_state* mrb, mrb_irep* irep, FILE* out)
+void fprint_irep(mrb_state* mrb, mrb_irep* irep, std::ofstream &out)
 {
-	fprintf(out, "IREP %s ilen: %zd nlocals: %d nregs: %d plen: %zd rlen: %zd\n", irep->filename, irep->ilen, irep->nlocals, irep->nregs, irep->plen, irep->rlen);
+	//out << "IREP " << irep->filename;
+	out << "IREP";
+	out << " ilen: " << irep->ilen;
+	out << " nlocals: " << irep->nlocals;
+	out << " nregs: " << irep->nregs; 
+	out << " plen: " << irep->plen;
+	out << " rlen: " << irep->rlen;
+	out << std::endl;
 
-	fprintf(out, "\nSymbols:\n");
+	out << std::endl << "Symbols:" << std::endl;
 	for (int i = 0; i < irep->slen; i++)
 	{
 		const char* sym = mrb_sym2name(mrb, irep->syms[i]);
-		fprintf(out, "%d %s\n", i, sym);
+
+		if (sym == nullptr)
+		{
+			out << i << " (unnamed)" << std::endl;
+			continue;
+		}
+
+		out << i << " " << sym << std::endl;
 	}
 
-	fprintf(out, "\nPool:\n");
+	out << std::endl << "Pool:" << std::endl;
 	for (int i = 0; i < irep->plen; i++)
 	{
 		if (irep->pool[i].tt != MRB_TT_STRING) continue;
 
 		const char* val = mrb_str_to_cstr(mrb, irep->pool[i]);
-		fprintf(out, "%d %s\n", i, val);
+		out << i << " " << val << std::endl;
 	}
 
-	fprintf(out, "\nCode:\n");
+	out << std::endl << "Code:" << std::endl;
 	for (int i = 0; i < irep->ilen; i++)
 	{
 		mrb_code c = irep->iseq[i];
-		fprintf(out, "%d OP: %d A: %d B: %d: C: %d Bx: %d\n", i, GET_OPCODE(c), GETARG_A(c), GETARG_B(c), GETARG_C(c), GETARG_Bx(c));
+
+		out << i << " OP: " << GET_OPCODE(c);
+		out << " A: " << GETARG_A(c);
+		out << " B: " << GETARG_B(c);
+		out << " C: " << GETARG_C(c);
+		out << " Bx: " << GETARG_Bx(c);
+		out << std::endl;
 	}
 
-	fprintf(out, "\n");
+	out << std::endl;
 
 	for (int i = 0; i < irep->rlen; i++)
 	{
@@ -215,47 +252,45 @@ void fprint_irep(mrb_state* mrb, mrb_irep* irep, FILE* out)
 	}
 }
 
-void script_export_debug(const char* bin, const char* out_filename)
+void script_dump_debug(const char* bin, str_t out_filename, ScriptContent* content)
 {
 	mrb_state* mrb = mrb_open();
 	mrb_irep* irep = mrb_read_irep(mrb, (uint8_t*)bin);
+	
+	if (irep == nullptr) return;
 
-	FILE* out;
-	fopen_s(&out, out_filename, "wb");
-
-	fprint_irep(mrb, irep, out);
-
+	std::ofstream file(out_filename, std::ios::binary);
+	fprint_irep(mrb, irep, file);
 	mrb_close(mrb);
 
-	/*
-	script_content* content = script_extract(bin);
-
-	for (int i = 0; i < content->num_messages; i++)
+	if (content != nullptr)
 	{
-		script_message* message = &content->messages[i];
+		for (ScriptMessage &message : content->Messages)
+		{
+			file << std::endl;
+			file << "ID :" << message.Id << std::endl;
+			file << "JP :" << message.Jp << std::endl;
+			file << "EN :" << message.En << std::endl;
+			file << "FR :" << message.Fr << std::endl;
+			file << "IT :" << message.It << std::endl;
+			file << "DE :" << message.De << std::endl;
+			file << "SP :" << message.Sp << std::endl;
+			file << "KR :" << message.Kr << std::endl;
+			file << "CN :" << message.Cn << std::endl;
+		}
 
-		fputs("ID: ", out);
-		fputs(message->id, out);
-		fputs("\nJP: ", out);
-		fputs(message->jp, out);
-		fputs("\nEN: ", out);
-		fputs(message->en, out);
-		fputs("\nFR: ", out);
-		fputs(message->fr, out);
-		fputs("\nIT: ", out);
-		fputs(message->it, out);
-		fputs("\nDE: ", out);
-		fputs(message->de, out);
-		fputs("\nSP: ", out);
-		fputs(message->sp, out);
-		fputs("\nKR: ", out);
-		fputs(message->kr, out);
-		fputs("\nCN: ", out);
-		fputs(message->cn, out);
-		fputs("\n\n", out);
+		for (std::vector<std::string> &scene : content->Scenes)
+		{
+			file << std::endl;
+
+			for (std::string &id : scene)
+			{
+				file << id << std::endl;
+			}
+		}
 	}
-	*/
-	fclose(out);
+
+	file.close();
 }
 
 char* script_import(const char* bin, const char* filename, int* size)

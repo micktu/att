@@ -178,11 +178,13 @@ void DoExport(int &argc, wchar_t ** &argv)
 				char* bin = dat.ReadFile();
 				ScriptContent* content = script_extract(bin);
 
+				outDir += gf.Filename;
+
+				//script_dump_debug(bin, outDir + L".debug.txt", content);
+
 				if (nullptr != content)
 				{
-					outDir += gf.Filename;
-					outDir += L".txt";
-					script_export(content, outDir);
+					script_export(content, outDir + L".txt");
 					wcout << L"Done." << std::endl;
 				}
 				else
@@ -194,6 +196,8 @@ void DoExport(int &argc, wchar_t ** &argv)
 				delete bin;
 		}
 	}
+
+	wcout << std::endl << L"Fin";
 }
 
 void ReadGameData(GameData& gd, const str_t filter, const str_t verb)
