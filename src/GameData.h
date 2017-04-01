@@ -24,7 +24,7 @@ public:
 
 	bool Read(str_t filter);
 
-	FORCEINLINE void GameData::ProcessFile(const str_t &filename, const str_t &filter);
+	FORCEINLINE void ProcessFile(const str_t &filename, const str_t &filter);
 	bool CheckExtension(const str_t &filename, const ext_vector_t & list) const;
 	FORCEINLINE bool IsDatFile(const str_t &filename) const;
 	FORCEINLINE bool IsTextFile(const str_t &filename) const;

@@ -2,13 +2,14 @@
 #include <Shlwapi.h>
 #include <ShlObj.h>
 #include <PathCch.h>
-
+#include <locale>
+#include <codecvt>
 
 static wchar_t PATH_BUFFER[MAX_PATH];
 
 str_t path_strip_filename(str_t filename)
 {
-	filename.copy(PATH_BUFFER, MAX_PATH, 0);
+	wcscpy_s(PATH_BUFFER, MAX_PATH, filename.c_str());
 	PathCchRemoveFileSpec(PATH_BUFFER, MAX_PATH);
 	return str_t(PATH_BUFFER);
 }
@@ -33,9 +34,7 @@ void split_path(const str_t &str, str_t &path, str_t &name, str_t &ext)
 
 str_t strip_slash(const str_t &path)
 {
-	//path.copy(PATH_BUFFER, MAX_PATH);
 	wcscpy_s(PATH_BUFFER, MAX_PATH, path.c_str());
-	size_t size = path.size();
 	if (S_OK == PathCchRemoveBackslash(PATH_BUFFER, MAX_PATH))
 	{
 		return str_t(PATH_BUFFER);
@@ -131,4 +130,16 @@ size_t get_file_size(const str_t& filename)
 	std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
 	return in.tellg();
 	in.close();
+}
+
+str_t utf8_to_wstr(const char* bytes)
+{
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> convert;
+	return convert.from_bytes(bytes);
+}
+
+std::string wstr_to_utf8(str_t str)
+{
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> convert;
+	return convert.to_bytes(str);
 }

@@ -8,46 +8,45 @@
 #include "mruby/string.h"
 
 
+enum TextState
+{
+	Idle,
+	CollectingStrings,
+	ExpectingArray,
+	ExpectingID
+};
+
 #define STATE_IDLE 0
 #define STATE_COLLECTING_STRINGS 1
 #define STATE_EXPECTING_ARRAY 2
 #define STATE_EXPECTING_ID 3
 
-#define copy_rstring(from, to) strcpy_s(to, RSTRING_PTR(from));
+#define rstring_to_wstring(str) utf8_to_wstr(RSTRING_PTR(*str))
+#define rstring_to_string(str) std::string(RSTRING_PTR(*str))
+#define sym_to_wstring(mrb, irep, index) utf8_to_wstr(mrb_sym2name(mrb, irep->syms[index]))
 
-typedef struct script_message
+struct ScriptMessage
 {
-	char id[256];
+	std::string Id;
 
-	char jp[256];
-	char en[256];
-	char fr[256];
-	char it[256];
-	char de[256];
-	char sp[256];
-	char kr[256];
-	char cn[256];
-
-	char ru[256];
+	std::string Jp;
+	std::string En;
+	std::string Fr;
+	std::string It;
+	std::string De;
+	std::string Sp;
+	std::string Kr;
+	std::string Cn;
 
 	mrb_irep* irep;
-	int index;
-} script_message;
+	int Index;
+};
 
-typedef struct script_scene
+struct ScriptContent
 {
-	int num_ids;
-	char(*ids)[255];
-} script_scene;
-
-typedef struct script_content
-{
-	int num_messages;
-	script_message messages[100];
-
-	int num_scenes;
-	script_scene scenes[100];
-} script_content;
+	std::vector<ScriptMessage> Messages;
+	std::vector<std::vector<std::string>> Scenes;
+};
 
 struct subtitle_entry
 {
@@ -85,12 +84,18 @@ struct text_content
 	text_entry* entries;
 };
 
-script_content* script_extract(const char* bin);
+struct TranslationLine
+{
+	str_t Id;
+	str_t Translation;
+};
 
-void script_export(script_content* content, const char* filename);
+ScriptContent* script_extract(const char* bin);
+
+void script_export(ScriptContent* content, str_t filename);
 
 void script_export_debug(const char* bin, const char* out_filename);
 
 char* script_import(const char* bin, const char* filename, int* size);
 
-script_message* script_find_messsage(script_content* content, const char* id);
+ScriptMessage* script_find_messsage(ScriptContent *content, std::string id);

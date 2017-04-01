@@ -1,9 +1,15 @@
 #include "DatFile.h"
 #include "utils.h"
 
-DatFileEntry::DatFileEntry(uint32_t index, str_t name, dat_ext_t extension, dat_size_t size, dat_offset_t offset) : Index(index), Name(name), Size(size), Offset(offset)
+DatFileEntry::DatFileEntry(DatFile* dat, uint32_t index, str_t name, dat_size_t size, dat_offset_t offset) : Index(index), Name(name), Size(size), Offset(offset), Dat(dat)
 {
-	strcpy_s(Extension, extension);
+}
+
+char* DatFileEntry::ReadFile()
+{
+	char* buffer = new char[Size];
+	Dat->ReadFile(this, buffer);
+	return buffer;
 }
 
 bool DatFile::CheckFile(str_t &path)
@@ -73,7 +79,7 @@ bool DatFile::Read(const str_t &filename)
 	_entries.reserve(numEntries);
 	for (int i = 0; i < numEntries; i++)
 	{
-		_entries.emplace_back(i, cstr_to_wstr(names[i]), extensions[i], sizes[i], offsets[i]);
+		_entries.emplace_back(this, i, cstr_to_wstr(names[i]), sizes[i], offsets[i]);
 	}
 
 	return true;

@@ -65,7 +65,7 @@ void GameData::ProcessFile(const str_t &filename, const str_t &filter)
 
 bool GameData::CheckExtension(const str_t &filename, const ext_vector_t &list) const
 {
-	for (wchar_t *ext : list)
+	for (const wchar_t *ext : list)
 	{
 		if (ext_equals(filename, ext)) return true;
 	}

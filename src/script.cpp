@@ -1,17 +1,15 @@
 #include "script.h"
+#include "utils.h"
 
 
-script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
+ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 {
-	script_content* content = new script_content;
-	content->num_messages = 0;
-	content->num_scenes = 0;
+	ScriptContent* content = new ScriptContent();
 
-	int message_index;
-	mrb_value messages[8];
+	int messageIndex;
+	std::vector<mrb_value*> messages(8);
 
-	int counter = 0;
-	int state = STATE_IDLE;
+	TextState state = Idle;
 
 	for (int i = 0; i < irep->ilen; i++)
 	{
@@ -20,114 +18,101 @@ script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 
 		switch (state)
 		{
-		case STATE_IDLE:
-		case STATE_COLLECTING_STRINGS:
-			if (opcode == OP_STRING)
+		case Idle:
+		case CollectingStrings:
+			if (OP_STRING == opcode)
 			{
 				int index = GETARG_Bx(code);
-				if (counter < 1) message_index = index;
+				if (messages.empty()) messageIndex = index;
 
-				messages[counter++] = irep->pool[index];
-				state = STATE_COLLECTING_STRINGS;
+				messages.push_back(&irep->pool[index]);
+				state = CollectingStrings;
 
-				if (counter > 7) state = STATE_EXPECTING_ARRAY;
+				if (messages.size() > 7) state = ExpectingArray;
 				continue;
 			}
 
-			//if (counter > 0)
-			//{
-			//	printf("Found %d strings, and then reset.\n", counter);
-			//	for (int j = 0; j < counter; j++)
-			//	{
-			//		mrb_p(mrb, messages[j]);
-			//	}
-			//}
-			state = STATE_IDLE;
-			counter = 0;
+			state = Idle;
+			messages.clear();
 			break;
 
-		case STATE_EXPECTING_ARRAY:
-			if (opcode == OP_ARRAY)
+		case ExpectingArray:
+			if (OP_ARRAY == opcode)
 			{
-				state = STATE_EXPECTING_ID;
+				state = ExpectingID;
 				continue;
 			}
 
 			printf("Expected OP_ARRAY, got %d @ %d | ", opcode, i);
-			counter = 0;
-			state = STATE_IDLE;
+			messages.clear();
+			state = Idle;
 			break;
 
-		case STATE_EXPECTING_ID:
-			if (opcode == OP_SETCONST)
+		case ExpectingID:
+			if (OP_SETCONST == opcode)
 			{
-				script_message message;
-				const char* message_id = mrb_sym2name(mrb, irep->syms[GETARG_Bx(code)]);
-				strcpy_s(message.id, message_id);
-
-				copy_rstring(messages[0], message.jp);
-				copy_rstring(messages[1], message.en);
-				copy_rstring(messages[2], message.fr);
-				copy_rstring(messages[3], message.it);
-				copy_rstring(messages[4], message.de);
-				copy_rstring(messages[5], message.sp);
-				copy_rstring(messages[6], message.kr);
-				copy_rstring(messages[7], message.cn);
-
+				ScriptMessage message;
+				message.Id = mrb_sym2name(mrb, irep->syms[GETARG_Bx(code)]);
+				message.Jp = rstring_to_string(messages[0]);
+				message.En = rstring_to_string(messages[1]);
+				message.Fr = rstring_to_string(messages[2]);
+				message.It = rstring_to_string(messages[3]);
+				message.De = rstring_to_string(messages[4]);
+				message.Sp = rstring_to_string(messages[5]);
+				message.Kr = rstring_to_string(messages[6]);
+				message.Cn = rstring_to_string(messages[7]);
+				message.Index = messageIndex;
 				message.irep = irep;
-				message.index = message_index;
-				content->messages[content->num_messages++] = message;
+				content->Messages.push_back(message);
 
-				state = STATE_IDLE;
-				counter = 0;
+				state = Idle;
+				messages.clear();
 				continue;
 			}
 
-			counter = 0;
 			printf("Expected OP_SETCONST, got %d @ %d | ", opcode, i);
-			state = STATE_IDLE;
+			messages.clear();
+			state = Idle;
 			break;
 		}
 	}
 
-	bool found_mess = false;
-	script_scene scene;
-	scene.num_ids = 0;
-	scene.ids = (char(*)[255])malloc(sizeof(char[255]) * 100);
+	bool bFound = false;
+	std::vector<std::string> scene;
 
 	for (int i = 0; i < irep->slen; i++)
 	{
-		const char* sym = mrb_sym2name(mrb, irep->syms[i]);
+		std::string sym = mrb_sym2name(mrb, irep->syms[i]);
 
-		if (!found_mess && strstr(sym, "mess"))
+		if (!bFound && sym.find("mess") != -1)
 		{
-			found_mess = true;
+			bFound = true;
 			continue;
 		}
 
-		if (found_mess && sym[0] == 'M')
+		if (bFound && sym[0] == 'M')
 		{
-			strcpy_s(scene.ids[scene.num_ids++], sym);
+			scene.push_back(sym);
 		}
 	}
 
-	if (scene.num_ids > 0)
+	if (!scene.empty())
 	{
-		content->scenes[content->num_scenes++] = scene;
+		content->Scenes.push_back(scene);
 	}
 
 	for (int i = 0; i < irep->rlen; i++)
 	{
-		script_content* section = collect_dialogue(mrb, irep->reps[i]);
+		ScriptContent* section = collect_dialogue(mrb, irep->reps[i]);
 
-		memcpy(content->messages + content->num_messages, section->messages, sizeof(script_message) * section->num_messages);
-		content->num_messages += section->num_messages;
+		auto& mes = content->Messages;
+		auto& smes = section->Messages;
+		mes.insert(mes.begin(), smes.begin(), smes.end());
 
-		for (int j = 0; j < section->num_scenes; j++)
+		for (std::vector<std::string>& scene : section->Scenes)
 		{
-			script_scene* scene = &section->scenes[j];
-			if (scene->num_ids < 1) continue;
-			content->scenes[content->num_scenes++] = *scene;
+			if (scene.empty()) continue;
+			content->Scenes.push_back(scene);
 		}
 
 		delete section;
@@ -136,54 +121,63 @@ script_content* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 	return content;
 }
 
-script_content* script_extract(const char* bin)
+ScriptContent* script_extract(const char* bin)
 {
 	mrb_state* mrb = mrb_open();
 	mrb_irep* irep = mrb_read_irep(mrb, (uint8_t*)bin);
 
-	script_content* content = collect_dialogue(mrb, irep);
+	if (irep == nullptr)
+	{
+		return nullptr;
+	}
+
+	ScriptContent* content = collect_dialogue(mrb, irep);
 	mrb_close(mrb);
 
 	return content;
 }
 
-void script_export(script_content* content, const char* filename)
+void script_export(ScriptContent* content, str_t filename)
 {
-	if (content->num_messages < 1) return;
+	if (content->Messages.empty()) return;
 
-	FILE* out;
-	fopen_s(&out, filename, "wb");
+	std::ofstream file(filename);
 
-	if (out == nullptr)
+	if (!file.is_open())
 	{
-		printf("Cannot write file %s", filename);
+		wcout << "Cannot write file " << filename;
 		return;
 	}
 
-	for (int i = 0; i < content->num_scenes; i++)
+	for (int i = 0; i < content->Scenes.size(); i++)
 	{
-		script_scene* scene = &content->scenes[i];
+		std::vector<std::string> &scene = content->Scenes[i];
+		
+		file << "### Scene " << i + 1 << std::endl << std::endl;
 
-		fprintf(out, "### Scene %d\r\n\r\n", i + 1);
-
-		for (int j = 0; j < scene->num_ids; j++)
+		for (std::string &id : scene)
 		{
-			script_message* message = script_find_messsage(content, scene->ids[j]);
+			const ScriptMessage* message = script_find_messsage(content, id);
 
-			if (message > 0)
+			if (message != nullptr)
 			{
-				fprintf(out, "ID: %s\r\nJP: %s\r\nEN: %s\r\nRU: \r\n\r\n", scene->ids[j], message->jp, message->en);
+				file << "ID: " << id << std::endl;
+				file << "JP: " << message->Jp << std::endl;
+				file << "EN: " << message->En << std::endl;
+				file << "RU: " << "" << std::endl;
 			}
 			else
 			{
-				fprintf(out, "ID: %s\r\nMESSAGE NOT FOUND", scene->ids[j]);
+				file << "ID: " << id << std::endl << "MESSAGE NOT FOUND" << std::endl;
 			}
+
+			file << std::endl;
 		}
 
-		fputs("\r\n", out);
+		file << std::endl;
 	}
 
-	fclose(out);
+	file.close();
 }
 
 void fprint_irep(mrb_state* mrb, mrb_irep* irep, FILE* out)
@@ -273,12 +267,12 @@ char* script_import(const char* bin, const char* filename, int* size)
 	mrb_state* mrb = mrb_open();
 	mrb_irep* irep = mrb_read_irep(mrb, (uint8_t*)bin);
 
-	script_content* content = collect_dialogue(mrb, irep);
+	ScriptContent* content = collect_dialogue(mrb, irep);
 
-	script_message* message = script_find_messsage(content, "M0010_S0005_S0000_101_a2b");
+	//ScriptMessage* message = script_find_messsage(*content, "M0010_S0005_S0000_101_a2b");
 
-	const char* val = mrb_str_to_cstr(mrb, message->irep->pool[message->index + 1]);
-	printf("\n%s\n\n", val);
+	//const char* val = mrb_str_to_cstr(mrb, message->irep->pool[message->index + 1]);
+	//printf("\n%s\n\n", val);
 
 	//message->irep->pool[message->index + 1] = mrb_str_new_cstr(mrb, u8"Микту ебашит");
 
@@ -300,15 +294,15 @@ char* script_import(const char* bin, const char* filename, int* size)
 
 }
 
-script_message* script_find_messsage(script_content* content, const char* id)
+ScriptMessage* script_find_messsage(ScriptContent *content, std::string id)
 {
-	for (int i = 0; i < content->num_messages; i++)
+	for (ScriptMessage &message : content->Messages)
 	{
-		if (strcmp(content->messages[i].id, id) == 0)
+		if (message.Id.compare(id) == 0)
 		{
-			return &content->messages[i];
+			return &message;
 		}
 	}
 
-	return 0;
+	return nullptr;
 }

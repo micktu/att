@@ -6,29 +6,8 @@
 #include "script.h"
 #include "utils.h"
 
+
 /*
-void process_script(DatFileEntry* entry, char* outPath, bool debug)
-{
-	printf("Processing script %s... ", entry->Name);
-
-	char* buffer = new char[entry->Size];
-	entry->Dat->ReadFile(entry->Index, buffer);
-	script_content* content = script_extract(buffer);
-
-	char out_path[MAX_PATH];
-	sprintf_s(out_path, "%s\\%.*s.txt", outPath, (int)strlen(entry->Name) - 4, entry->Name);
-
-	script_export(content, out_path);
-
-	if (debug)
-	{
-		sprintf_s(out_path, "%s\\%.*s.debug.txt", outPath, (int)strlen(entry->Name) - 4, entry->Name);
-		script_export_debug(buffer, out_path);
-	}
-
-	delete[] buffer;
-}
-
 void process_subtitle(DatFileEntry* entry, char* outPath)
 {
 	char* buffer = new char[entry->Size];
@@ -169,7 +148,50 @@ void DoExtract(int &argc, wchar_t ** &argv)
 			str_t outDir = outPath + add_slash(path_strip_filename(strip_slash(gf.Path)));
 			create_dir_recursive(outDir);
 			DatFile& dat = datFiles[gf.DatIndex];
-			dat.ExtractFile(dat[gf.IndexInDat], outDir);
+			dat.ExtractFile(&dat[gf.IndexInDat], outDir);
+		}
+	}
+}
+
+void DoExport(int &argc, wchar_t ** &argv)
+{
+	str_t path = add_slash(path_normalize(argv[0]));
+	str_t outPath = add_slash(path_normalize(argv[1]));
+
+
+	GameData gd(path);
+	ReadGameData(gd, L"text", L"Exporting");
+
+	std::vector<DatFile>& datFiles = gd.GetDatFiles();
+
+	for (GameFile& gf : gd)
+	{
+		str_t outDir = outPath + add_slash(path_strip_filename(strip_slash(gf.Path)));
+		create_dir_recursive(outDir);
+
+		if (ext_equals(gf.Filename, L".bin"))
+		{
+				wcout << L"Processing script " << gf.Filename << L"... ";
+
+				DatFileEntry& dat = datFiles[gf.DatIndex][gf.IndexInDat];
+
+				char* bin = dat.ReadFile();
+				ScriptContent* content = script_extract(bin);
+
+				if (nullptr != content)
+				{
+					outDir += gf.Filename;
+					outDir += L".txt";
+					script_export(content, outDir);
+					wcout << L"Done." << std::endl;
+				}
+				else
+				{
+					wcout << L"Failed to load script." << std::endl;
+				}
+
+				delete content;
+				delete bin;
 		}
 	}
 }

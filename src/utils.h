@@ -14,5 +14,7 @@ str_t path_normalize(str_t path);
 void split_path(const str_t &str, str_t &path, str_t &name, str_t &ext);
 void create_dir_recursive(str_t path);
 size_t get_file_size(const str_t& filename);
+str_t utf8_to_wstr(const char * bytes);
+std::string wstr_to_utf8(str_t str);
 str_vector_t find_files_recursive(str_t path, int pathSize);
 str_vector_t find_files(str_t path);

@@ -5,8 +5,8 @@
 
 #define DAT_MAGIC '\x00TAD'
 typedef uint32_t dat_offset_t, dat_size_t;
-typedef char dat_name_t[MAX_PATH];
-typedef char dat_ext_t[4];
+using dat_name_t = char[MAX_PATH];
+using dat_ext_t = char[4];
 
 struct dat_header
 {
@@ -22,13 +22,17 @@ struct dat_header
 
 struct DatFileEntry
 {
-	DatFileEntry(uint32_t index, str_t name, dat_ext_t extension, dat_size_t size, dat_offset_t offset);
+	DatFileEntry() = default;
+	DatFileEntry(class DatFile* dat, uint32_t index, str_t name, dat_size_t size, dat_offset_t offset);
 
 	uint32_t Index;
-	dat_ext_t Extension;
 	str_t Name;
 	dat_size_t Size;
 	dat_offset_t Offset;
+
+	DatFile* Dat;
+
+	char* ReadFile();
 };
 
 class DatFile
@@ -57,7 +61,7 @@ public:
 
 	FORCEINLINE str_t GetPath() const { return _path; }
 	FORCEINLINE size_t NumEntries() const { return _entries.size(); }
-	FORCEINLINE DatFileEntry* operator[](int index) { return &_entries[index]; }
+	FORCEINLINE DatFileEntry& operator[](int index) { return _entries[index]; }
 
 	auto begin() { return _entries.begin(); }
 	auto end() { return _entries.end(); }
