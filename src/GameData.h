@@ -12,7 +12,7 @@ class GameData
 	wstr_t BasePath;
 	wstr_vec_t Filenames;
 	std::vector<DatFile> DatFiles;
-	std::vector<GameFile> GameFiles;
+	std::map<wstr_t, GameFile> GameFiles;
 
 public:
 
@@ -32,10 +32,10 @@ public:
 
 	FORCEINLINE wstr_t GetBasePath() { return BasePath; }
 	FORCEINLINE wstr_vec_t& GetFilenames() { return Filenames; }
-	FORCEINLINE std::vector<GameFile>& GetGameFiles() { return GameFiles; }
+	FORCEINLINE std::map<wstr_t, GameFile>& GetGameFiles() { return GameFiles; }
 	FORCEINLINE std::vector<DatFile>& GetDatFiles() { return DatFiles; }
 
-	FORCEINLINE GameFile& operator[](size_t index) { return GameFiles[index]; }
+	FORCEINLINE GameFile& operator[](wstr_t id) { return GameFiles[id]; }
 	auto begin() { return GameFiles.begin(); }
 	auto end() { return GameFiles.end(); }
 };

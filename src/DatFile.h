@@ -34,12 +34,12 @@ struct DatFileEntry
 
 	DatFile* Dat;
 
-	char * ReadFile();
+	char_vector_t ReadFile();
 };
 
 class DatFile
 {
-	wstr_t _path;
+	wstr_t Path;
 	std::vector<DatFileEntry> _entries;
 	dat_header _header;
 
@@ -56,13 +56,13 @@ public:
 
 	bool Read(const wstr_t &filename);
 	std::ifstream OpenFile(const DatFileEntry * entry);
-	void ReadFile(const DatFileEntry* entry, char* buffer);
+	void ReadFile(const DatFileEntry& entry, char* buffer);
 	void InjectFile(int index, char * buffer, uint32_t numBytes);
 	const DatFileEntry * FindFile(wstr_t &name);
-	void ExtractFile(const DatFileEntry* entry, wstr_t outPath);
+	void ExtractFile(DatFileEntry &entry, wstr_t outPath);
 	void ExtractAll(wstr_t &outPath);
 
-	FORCEINLINE wstr_t GetPath() const { return _path; }
+	FORCEINLINE wstr_t GetPath() const { return Path; }
 	FORCEINLINE size_t NumEntries() const { return _entries.size(); }
 	FORCEINLINE DatFileEntry& operator[](size_t index) { return _entries[index]; }
 

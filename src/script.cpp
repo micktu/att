@@ -56,11 +56,13 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep, wstr_t & filenam
 		case ExpectingID:
 			if (OP_SETCONST == opcode)
 			{
+				str_t id = mrb_sym2name(mrb, irep->syms[GETARG_Bx(code)]);
+
 				LocMessage message;
 				message.Index = messageIndex;
 				message.irep = irep;
 
-				message.Id = mrb_sym2name(mrb, irep->syms[GETARG_Bx(code)]);
+				message.Id = id;
 
 				message.Jp = rstring_to_string(messages[0]);
 				message.En = rstring_to_string(messages[1]);
@@ -71,7 +73,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep, wstr_t & filenam
 				//message.Kr = rstring_to_string(messages[6]);
 				//message.Cn = rstring_to_string(messages[7]);
 				
-				content->Messages.push_back(message);
+				content->Messages.emplace(id, message);
 
 				state = Idle;
 				messages.clear();
@@ -123,7 +125,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep, wstr_t & filenam
 
 		auto& mes = content->Messages;
 		auto& smes = section->Messages;
-		mes.insert(mes.begin(), smes.begin(), smes.end());
+		mes.insert(smes.begin(), smes.end());
 
 		for (str_vec_t& s : section->Scenes)
 		{
@@ -182,11 +184,10 @@ void script_export(ScriptContent* content, wstr_t filename)
 
 		for (std::string &id : scene)
 		{
-			LocMessage* message = script_find_messsage(content, id);
-
-			if (message != nullptr)
+			if (content->Messages.count(id) > 0)
 			{
-				file << format_loc_message(*message);
+				LocMessage &message = content->Messages[id];
+				file << format_loc_message(message);
 				file << std::endl;
 			}
 			else
@@ -269,8 +270,10 @@ void script_dump_debug(const char* bin, wstr_t out_filename, ScriptContent* cont
 
 	if (content != nullptr)
 	{
-		for (LocMessage &message : content->Messages)
+		for (auto &pair : content->Messages)
 		{
+			LocMessage &message = pair.second;
+
 			file << std::endl;
 			file << "ID :" << message.Id << std::endl;
 			file << "JP :" << message.Jp << std::endl;
@@ -297,51 +300,25 @@ void script_dump_debug(const char* bin, wstr_t out_filename, ScriptContent* cont
 	file.close();
 }
 
-char* script_import(const char* bin, const char* filename, size_t * size)
+char_vector_t script_import(str_map_t &messages, const char* bin, wstr_t &filename)
 {
-	// Open text file
-	// Find messages
-	// Open irep
-
 	mrb_state* mrb = mrb_open();
 	mrb_irep* irep = mrb_read_irep(mrb, (uint8_t*)bin);
 
-	//ScriptContent* content = collect_dialogue(mrb, irep, );
+	ScriptContent* content = collect_dialogue(mrb, irep, filename);
 
-	//ScriptMessage* message = script_find_messsage(*content, "M0010_S0005_S0000_101_a2b");
-
-	//const char* val = mrb_str_to_cstr(mrb, message->irep->pool[message->index + 1]);
-	//printf("\n%s\n\n", val);
-
-	//message->irep->pool[message->index + 1] = mrb_str_new_cstr(mrb, u8"Микту ебашит");
-
-	size_t outSize;
-	uint8_t* buffer = new uint8_t[1024 * 1024];
-	mrb_dump_irep(mrb, irep, 0, &buffer, &outSize);
-
-	mrb_close(mrb);
-
-	char* outBuffer = new char[outSize];
-	memcpy(outBuffer, buffer, outSize);
-
-	*size = outSize;
-	return outBuffer;
-
-	// Replace messages in irep
-	// dump irep
-	// replace binary in dat
-
-}
-
-LocMessage* script_find_messsage(ScriptContent *content, std::string id)
-{
-	for (LocMessage &message : content->Messages)
+	for(auto &message : messages)
 	{
-		if (message.Id.compare(id) == 0)
-		{
-			return &message;
-		}
+		LocMessage &locMessage = content->Messages[message.first];
+		locMessage.irep->pool[locMessage.Index + 1] = mrb_str_new_cstr(mrb, message.second.c_str());
 	}
 
-	return nullptr;
+	size_t outSize;
+	char_vector_t out(0x100000);
+	uint8_t* data = (uint8_t*)out.data();
+	mrb_dump_irep(mrb, irep, 0, &data, &outSize);
+	out.resize(outSize);
+	mrb_close(mrb);
+
+	return out;
 }

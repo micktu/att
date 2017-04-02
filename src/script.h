@@ -47,7 +47,7 @@ using mess_map = std::map<std::wstring, LocMessage>;
 
 struct ScriptContent
 {
-	std::vector<LocMessage> Messages;
+	std::map<str_t, LocMessage> Messages;
 	std::vector<str_vec_t> Scenes;
 };
 
@@ -69,13 +69,10 @@ struct text_content
 	text_entry* entries;
 };
 
-
 ScriptContent* script_extract(const char* bin, wstr_t &filename);
 
 void script_export(ScriptContent* content, wstr_t filename);
 
 void script_dump_debug(const char* bin, wstr_t out_filename, ScriptContent* content = nullptr);
 
-char* script_import(const char* bin, const char* filename, size_t * size);
-
-LocMessage* script_find_messsage(ScriptContent *content, std::string id);
+char_vector_t script_import(str_map_t &messages, const char* bin, wstr_t &filename);

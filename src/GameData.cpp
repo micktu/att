@@ -18,10 +18,9 @@ GameData::GameData(wstr_t &path) : GameData()
 
 bool GameData::Read(wstr_t filter)
 {
+	DatFiles.reserve(0x2B2B);
 	DatFiles.clear();
-	DatFiles.reserve(Filenames.size());
 	GameFiles.clear();
-	GameFiles.reserve(10 * Filenames.size());
 
 	for (wstr_t& filename : Filenames)
 	{
@@ -37,7 +36,8 @@ void GameData::ProcessFile(const wstr_t &filename, const wstr_t &filter)
 
 	if (!IsDatFile(filePath) && IsRelevantFile(filename, filter))
 	{
-		GameFiles.emplace_back(this, filename, GameFiles.size(), get_file_size(filePath));
+		GameFile gf(this, filename, GameFiles.size(), get_file_size(filePath));
+		GameFiles.emplace(filePath, gf);
 		return;
 	}
 
@@ -54,7 +54,9 @@ void GameData::ProcessFile(const wstr_t &filename, const wstr_t &filter)
 		{
 			if (IsRelevantFile(entry.Name, filter))
 			{
-				GameFiles.emplace_back(this, relPath + entry.Name, GameFiles.size(), entry.Size, datIndex, i);
+				wstr_t fullName = relPath + entry.Name;
+				GameFile gf(this, fullName, GameFiles.size(), entry.Size, datIndex, i);
+				GameFiles.emplace(fullName, gf);
 			}
 			++i;
 		}

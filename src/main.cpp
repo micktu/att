@@ -46,8 +46,9 @@ void DoList(int &argc, wchar_t ** &argv)
 	GameData gd(path);
 	ReadGameData(gd, argc > 1 ? argv[1] : L"", L"Listing");
 
-	for (GameFile& gf : gd)
+	for (auto &pair : gd)
 	{
+		GameFile &gf = pair.second;
 		wc << gf.Path << gf.Filename << std::endl;
 	}
 }
@@ -60,16 +61,17 @@ void DoExtract(int &argc, wchar_t ** &argv)
 	GameData gd(path);
 	ReadGameData(gd, argc > 2 ? argv[2] : L"", L"Extracting");
 
-	std::vector<DatFile>& datFiles = gd.GetDatFiles();
+	std::vector<DatFile> &datFiles = gd.GetDatFiles();
 
-	for (GameFile& gf : gd)
+	for (auto &pair : gd)
 	{
+		GameFile& gf = pair.second;
 		if (gf.DatIndex != ~0)
 		{
 			wstr_t outDir = outPath + add_slash(path_strip_filename(strip_slash(gf.Path)));
 			create_dir_recursive(outDir);
 			DatFile& dat = datFiles[gf.DatIndex];
-			dat.ExtractFile(&dat[gf.IndexInDat], outDir);
+			dat.ExtractFile(dat[gf.IndexInDat], outDir);
 		}
 	}
 }
@@ -79,7 +81,7 @@ static wchar_t WCS_BUFFER[0x2B2B];
 
 void ProcessStringFile(GameFile *gf, std::map<std::wstring, mess_map> *strMap)
 {
-	DatFileEntry* dat = gf->GetResource();
+	DatFileEntry* dat = gf->GetDatEntry();
 	wstr_t datPath(dat->Dat->GetPath());
 
 	std::wsmatch match;
@@ -93,7 +95,7 @@ void ProcessStringFile(GameFile *gf, std::map<std::wstring, mess_map> *strMap)
 	mess_map &mesMap = strMap->at(gf->Filename);
 
 	uint32_t numEntries;
-	std::ifstream file = gf->GetResource()->OpenFile();
+	std::ifstream file = gf->GetDatEntry()->OpenFile();
 	file.read((char *)&numEntries, sizeof(uint32_t));
 
 	bool bIsVarLength = ext_equals(gf->Filename, L".tmd");
@@ -212,13 +214,13 @@ void ExportStrings(std::vector<GameFile*> &files, wstr_t outPath)
 
 size_t ExportBinFile(GameFile *gf, wstr_t outPath)
 {
-	DatFileEntry* dat = gf->GetResource();
-	char *bin = dat->ReadFile();
-	ScriptContent* content = script_extract(bin, gf->Filename);
+	DatFileEntry* dat = gf->GetDatEntry();
+	char_vector_t bin = dat->ReadFile();
+	ScriptContent* content = script_extract(bin.data(), gf->Filename);
 
-	wstr_t outDir = outPath + add_slash(path_strip_filename(strip_slash(gf->Path)));
-	create_dir_recursive(outDir);
-	outDir += gf->Filename;
+	//wstr_t outDir = outPath + add_slash(path_strip_filename(strip_slash(gf->Path)));
+	wstr_t outDir = outPath + gf->Path;
+	wstr_t outFilename = outDir + gf->Filename;
 
 	//script_dump_debug(bin, outDir + L".debug.txt", content);
 
@@ -227,15 +229,19 @@ size_t ExportBinFile(GameFile *gf, wstr_t outPath)
 	if (nullptr != content)
 	{
 		count = content->Messages.size();
-		script_export(content, outDir + L".txt");
+		
+		if (count > 0)
+		{
+			create_dir_recursive(outDir);
+			script_export(content, outFilename + L".txt");
+		}
 	}
 	else
 	{
-		wc << outDir << L" failed to load." << std::endl;
+		wc << outFilename << L" failed to load." << std::endl;
 	}
 
 	delete content;
-	delete bin;
 
 	return count;
 }
@@ -266,8 +272,9 @@ void DoExport(int &argc, wchar_t ** &argv)
 	std::vector<GameFile*> scriptFiles;
 	std::vector<GameFile*> stringFiles;
 
-	for (GameFile& gf : gd)
+	for (auto &pair : gd)
 	{
+		GameFile& gf = pair.second;
 
 		if (ext_equals(gf.Filename, L".bin"))
 		{
@@ -288,6 +295,75 @@ void DoExport(int &argc, wchar_t ** &argv)
 	wc << std::endl;
 
 	wc << L"All done.";
+}
+
+str_map_t LoadText(wstr_t &path)
+{
+	std::ifstream file(path);
+
+	str_map_t messages;
+	str_t id;
+	for (str_t line; getline(file, line);)
+	{
+		if (line.length() < 6) continue;
+
+		str_t prefix = line.substr(0, 4);
+		str_t payload = line.substr(4, line.length() - 2);
+
+		if (prefix.compare("ID: ") == 0)
+		{
+			id = payload.c_str();
+		}
+		else if (prefix.compare("RU: ") == 0)
+		{
+			if (messages.count(id) > 0)
+			{
+				std::cout << id << " translation already exists.";
+			}
+
+			messages.emplace(id, payload);
+		}
+	}
+
+	return messages;
+}
+
+void DoImport(int &argc, wchar_t **&argv)
+{
+	wstr_t dataPath = add_slash(path_normalize(argv[0]));
+	wstr_t inPath = add_slash(path_normalize(argv[1]));
+	const wchar_t* outp = argc > 2 ? argv[2] : L"patch";
+	wstr_t outPath = add_slash(path_normalize(outp));
+
+	GameData gd(dataPath);
+	ReadGameData(gd, L"text", L"Patching");
+
+	wstr_vec_t files = find_files(inPath);
+	
+	for (wstr_t &fullName : files)
+	{
+		str_map_t messages = LoadText(inPath + fullName);
+		if (messages.size() < 1) continue;
+
+		wstr_t realName = fullName.substr(0, fullName.length() - 4);
+		wstr_t path, filename, ext;
+		split_path(realName, path, filename, ext);
+
+		if (ext_equals(ext, L".bin"))
+		{
+			GameFile &gf = gd[realName];
+
+			char_vector_t bin = gf.GetDatEntry()->ReadFile();
+			char_vector_t patchedBin = script_import(messages, bin.data(), filename);
+
+			// TODO Create dir; Copy dat; cache dat; write patch int dat
+
+		}
+		else if (ext_equals(ext, L".tmd") || ext_equals(ext, L".smd"))
+		{
+
+		}
+	}
 }
 
 void ReadGameData(GameData& gd, const wstr_t filter, const wstr_t verb)

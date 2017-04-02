@@ -20,7 +20,6 @@ wstr_t path_strip_filename(wstr_t filename)
 wstr_t path_normalize(wstr_t path)
 {
 	GetFullPathName(path.c_str(), MAX_PATH, PATH_BUFFER, nullptr);
-	//PathCchCanonicalize(PATH_BUFFER, MAX_PATH, path.c_str());
 	return wstr_t(PATH_BUFFER);
 }
 
@@ -140,7 +139,7 @@ wstr_t cstr_to_wstr(const char* cstr)
 
 bool ext_equals(const wstr_t & filename, const wchar_t * ext)
 {
-	return wcs_as_long(ext) == wcs_as_long(filename.c_str() + filename.length() - 4);
+	return 0 == filename.compare(filename.length() - 4, 4, ext);
 }
 
 size_t get_file_size(const wstr_t& filename)

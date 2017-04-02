@@ -11,10 +11,13 @@ void DoExtract(int & argc, wchar_t **& argv);
 
 void DoExport(int & argc, wchar_t **& argv);
 
+void DoImport(int & argc, wchar_t **& argv);
+
 void ReadGameData(class GameData& gd, const wstr_t filter, const wstr_t verb = L"");
 
 static const std::map<wstr_t, cmd_callback_t> commands {
 	{ L"list", &DoList },
 	{ L"extract", &DoExtract },
 	{ L"export", &DoExport },
+	{ L"import", &DoImport },
 };

@@ -10,10 +10,10 @@ std::ifstream DatFileEntry::OpenFile()
 	return Dat->OpenFile(this);
 }
 
-char* DatFileEntry::ReadFile()
+char_vector_t DatFileEntry::ReadFile()
 {
-	char* buffer = new char[Size];
-	Dat->ReadFile(this, buffer);
+	char_vector_t buffer(Size);
+	Dat->ReadFile(*this, buffer.data());
 	return buffer;
 }
 
@@ -39,7 +39,7 @@ DatFile::DatFile(const wstr_t &filename) : DatFile()
 
 bool DatFile::Read(const wstr_t &filename)
 {
-	_path = filename;
+	Path = filename;
 	_entries.clear();
 
 	std::ifstream file(filename, std::ios::binary);
@@ -92,23 +92,23 @@ bool DatFile::Read(const wstr_t &filename)
 
 std::ifstream DatFile::OpenFile(const DatFileEntry* entry)
 {
-	std::ifstream file(_path, std::ios::binary);
+	std::ifstream file(Path, std::ios::binary);
 	file.seekg(entry->Offset);
 	return file;
 }
 
-void DatFile::ReadFile(const DatFileEntry* entry, char* buffer)
+void DatFile::ReadFile(const DatFileEntry& entry, char* buffer)
 {
-	std::ifstream file(_path, std::ios::binary);
+	std::ifstream file(Path, std::ios::binary);
 
-	file.seekg(entry->Offset);
-	file.read(buffer, entry->Size);
+	file.seekg(entry.Offset);
+	file.read(buffer, entry.Size);
 	file.close();
 }
 
 void DatFile::InjectFile(int index, char * buffer, uint32_t numBytes)
 {
-	std::ofstream file(_path, std::ios::binary);
+	std::ofstream file(Path, std::ios::binary);
 
 	file.seekp(0, std::ios::end);
 	uint32_t offset = (uint32_t)file.tellp();
@@ -136,16 +136,15 @@ const DatFileEntry* DatFile::FindFile(wstr_t &name)
 	return nullptr;
 }
 
-void DatFile::ExtractFile(const DatFileEntry* entry, wstr_t outPath)
+void DatFile::ExtractFile(DatFileEntry &entry, wstr_t outPath)
 {
-	char* buffer = new char[entry->Size];
-	ReadFile(entry, buffer);
+	char_vector_t buffer = entry.ReadFile();
 
 	outPath += L"\\";
-	outPath += entry->Name;
+	outPath += entry.Name;
 
 	std::ofstream file(outPath, std::ios::binary);
-	file.write(buffer, entry->Size);
+	file.write(buffer.data(), buffer.size());
 	file.close();
 }
 
@@ -153,7 +152,7 @@ void DatFile::ExtractAll(wstr_t &outPath)
 {
 	for (DatFileEntry &entry : _entries)
 	{
-		ExtractFile(&entry, outPath);
+		ExtractFile(entry, outPath);
 	}
 }
 

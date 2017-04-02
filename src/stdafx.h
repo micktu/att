@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <iostream>
 #include <fstream>
+#include <array>
 #include <vector>
 #include <map>
 #include <string>
@@ -22,6 +23,7 @@ struct IUnknown; // Clang hack
 using namespace std::string_literals;
 
 using wcs_vector_t = std::vector<const wchar_t*>;
+using char_vector_t = std::vector<char>;
 
 using str_t = std::string;
 using str_vec_t = std::vector<str_t>;

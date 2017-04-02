@@ -3,7 +3,6 @@
 #include "stdafx.h"
 
 #define is_dir(path) (GetFileAttributes(path.c_str()) & FILE_ATTRIBUTE_DIRECTORY)
-#define wcs_as_long(str) (*reinterpret_cast<const uint64_t*>(str))
 
 bool ext_equals(const wstr_t &filename, const wchar_t *ext);
 wstr_t add_slash(const wstr_t &path);
