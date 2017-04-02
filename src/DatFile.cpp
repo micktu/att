@@ -5,7 +5,7 @@ DatFileEntry::DatFileEntry(DatFile* dat, uint32_t index, wstr_t name, dat_size_t
 {
 }
 
-std::ifstream * DatFileEntry::OpenFile()
+std::ifstream DatFileEntry::OpenFile()
 {
 	return Dat->OpenFile(this);
 }
@@ -90,10 +90,10 @@ bool DatFile::Read(const wstr_t &filename)
 	return true;
 }
 
-std::ifstream* DatFile::OpenFile(const DatFileEntry* entry)
+std::ifstream DatFile::OpenFile(const DatFileEntry* entry)
 {
-	std::ifstream* file = new std::ifstream(_path, std::ios::binary);
-	file->seekg(entry->Offset);
+	std::ifstream file(_path, std::ios::binary);
+	file.seekg(entry->Offset);
 	return file;
 }
 

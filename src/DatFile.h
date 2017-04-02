@@ -25,7 +25,7 @@ struct DatFileEntry
 	DatFileEntry() = default;
 	DatFileEntry(class DatFile* dat, uint32_t index, wstr_t name, dat_size_t size, dat_offset_t offset);
 
-	std::ifstream * OpenFile();
+	std::ifstream OpenFile();
 
 	uint32_t Index;
 	wstr_t Name;
@@ -55,7 +55,7 @@ public:
 	DatFile(const wstr_t &path);
 
 	bool Read(const wstr_t &filename);
-	std::ifstream * OpenFile(const DatFileEntry * entry);
+	std::ifstream OpenFile(const DatFileEntry * entry);
 	void ReadFile(const DatFileEntry* entry, char* buffer);
 	void InjectFile(int index, char * buffer, uint32_t numBytes);
 	const DatFileEntry * FindFile(wstr_t &name);

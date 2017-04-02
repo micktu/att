@@ -74,72 +74,16 @@ void DoExtract(int &argc, wchar_t ** &argv)
 	}
 }
 
-static const std::wregex SUB_REGEX(L"\\\\\\w+?(_([a-zA-Z]{2}))?\\.dat");
-
-static wchar_t WCS_BUFFER[0x999]; // Hey I can do that too
-
-std::map<wstr_t, wstr_t> ReadTmdFile(GameFile* gf)
-{
-	uint32_t numEntries;
-	std::ifstream* file = gf->GetResource()->OpenFile();
-	file->read((char *)&numEntries, sizeof(uint32_t));
-
-	uint32_t idLen, valLen;
-	wstr_t id, val;
-	std::map<wstr_t, wstr_t> lines;
-	
-	for (uint32_t i = 0; i < numEntries; i++)
-	{
-		file->read((char *)&idLen, sizeof(uint32_t));
-		file->read((char*)WCS_BUFFER, idLen * sizeof(wchar_t));
-		id.assign(WCS_BUFFER);
-
-		file->read((char *)&valLen, sizeof(uint32_t));
-		file->read((char*)WCS_BUFFER, valLen * sizeof(wchar_t));
-		val.assign(WCS_BUFFER);
-
-		lines.emplace(id, val);
-	}
-
-	delete file;
-
-	return lines;
-}
-
-std::map<wstr_t, wstr_t> ReadSmdFile(GameFile* gf)
-{
-	uint32_t numEntries;
-	std::ifstream* file = gf->GetResource()->OpenFile();
-	file->read((char *)&numEntries, sizeof(uint32_t));
-
-	wstr_t id, val;
-	std::map<wstr_t, wstr_t> lines;
-
-	for (uint32_t i = 0; i < numEntries; i++)
-	{
-		file->read((char*)WCS_BUFFER, 0x44 * sizeof(wchar_t));
-		id.assign(WCS_BUFFER);
-
-		file->read((char*)WCS_BUFFER, 0x400 * sizeof(wchar_t));
-		val.assign(WCS_BUFFER);
-
-		lines.emplace(id, val);
-	}
-
-	delete file;
-
-	return lines;
-}
+static const std::wregex STR_FILE_REGEX(L"\\\\\\w+?(_([a-zA-Z]{2}))?\\.dat");
+static wchar_t WCS_BUFFER[0x2B2B];
 
 void ProcessStringFile(GameFile *gf, std::map<std::wstring, mess_map> *strMap)
 {
-	//sub_content &sc = (*subs->try_emplace(gf->Filename).first).second;
-
 	DatFileEntry* dat = gf->GetResource();
 	wstr_t datPath(dat->Dat->GetPath());
 
 	std::wsmatch match;
-	std::regex_search(datPath, match, SUB_REGEX);
+	std::regex_search(datPath, match, STR_FILE_REGEX);
 	const wstr_t &loc = match[2].str();
 
 	if (strMap->count(gf->Filename) < 1)
@@ -148,18 +92,33 @@ void ProcessStringFile(GameFile *gf, std::map<std::wstring, mess_map> *strMap)
 	}
 	mess_map &mesMap = strMap->at(gf->Filename);
 
-	auto lines = ext_equals(gf->Filename, L".tmd") ? ReadTmdFile(gf) : ReadSmdFile(gf);
+	uint32_t numEntries;
+	std::ifstream file = gf->GetResource()->OpenFile();
+	file.read((char *)&numEntries, sizeof(uint32_t));
 
-	for (auto &pair : lines)
+	bool bIsVarLength = ext_equals(gf->Filename, L".tmd");
+	uint32_t idLen = 0x44, valLen = 0x400;
+	wstr_t id, val;
+	std::map<wstr_t, wstr_t> lines;
+
+	for (uint32_t i = 0; i < numEntries; i++)
 	{
-		if (mesMap.count(pair.first) < 1)
-		{
-			mesMap.emplace(pair.first, LocMessage());
-			mesMap[pair.first].Id = wstr_to_utf8(pair.first);
-		}
-		LocMessage &line = mesMap[pair.first];
+		if (bIsVarLength) file.read((char *)&idLen, sizeof(uint32_t));
+		file.read((char*)WCS_BUFFER, idLen * sizeof(wchar_t));
+		id.assign(WCS_BUFFER);
 
-		str_t text = wstr_to_utf8(pair.second);
+		if (bIsVarLength) file.read((char *)&valLen, sizeof(uint32_t));
+		file.read((char*)WCS_BUFFER, valLen * sizeof(wchar_t));
+		val.assign(WCS_BUFFER);
+
+		if (mesMap.count(id) < 1)
+		{
+			mesMap.emplace(id, LocMessage());
+			mesMap[id].Id = wstr_to_utf8(id);
+		}
+		LocMessage &line = mesMap[id];
+
+		str_t text = wstr_to_utf8(val);
 
 		if (loc.empty())
 		{
@@ -321,7 +280,6 @@ void DoExport(int &argc, wchar_t ** &argv)
 	}
 
 	wc << L"Saving scripts..." << std::endl;
-	wc << std::endl;
 	ExportScripts(scriptFiles, outPath);
 	wc << std::endl;
 
