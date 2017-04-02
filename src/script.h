@@ -2,7 +2,11 @@
 
 #include "stdafx.h"
 
+#pragma warning(push)
+#pragma warning(disable:4200)
 #include "mruby.h"
+#pragma warning(pop)
+
 #include "mruby/dump.h"
 #include "mruby/opcode.h"
 #include "mruby/string.h"
@@ -66,12 +70,12 @@ struct text_content
 };
 
 
-ScriptContent* script_extract(const char* bin);
+ScriptContent* script_extract(const char* bin, wstr_t &filename);
 
 void script_export(ScriptContent* content, wstr_t filename);
 
 void script_dump_debug(const char* bin, wstr_t out_filename, ScriptContent* content = nullptr);
 
-char* script_import(const char* bin, const char* filename, int* size);
+char* script_import(const char* bin, const char* filename, size_t * size);
 
 LocMessage* script_find_messsage(ScriptContent *content, std::string id);

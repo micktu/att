@@ -73,7 +73,7 @@ bool DatFile::Read(const wstr_t &filename)
 	std::vector<dat_name_t> names(numEntries);
 	file.seekg(_header.names);
 	file.read((char*)&name_size, sizeof(name_size));
-	for (int i = 0; i < numEntries; i++)
+	for (uint32_t i = 0; i < numEntries; i++)
 	{
 		file.read((char*)&names[i], name_size);
 	}
@@ -82,7 +82,7 @@ bool DatFile::Read(const wstr_t &filename)
 
 	// Build entries
 	_entries.reserve(numEntries);
-	for (int i = 0; i < numEntries; i++)
+	for (uint32_t i = 0; i < numEntries; i++)
 	{
 		_entries.emplace_back(this, i, cstr_to_wstr(names[i]), sizes[i], offsets[i]);
 	}

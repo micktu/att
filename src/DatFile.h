@@ -64,7 +64,7 @@ public:
 
 	FORCEINLINE wstr_t GetPath() const { return _path; }
 	FORCEINLINE size_t NumEntries() const { return _entries.size(); }
-	FORCEINLINE DatFileEntry& operator[](int index) { return _entries[index]; }
+	FORCEINLINE DatFileEntry& operator[](size_t index) { return _entries[index]; }
 
 	auto begin() { return _entries.begin(); }
 	auto end() { return _entries.end(); }

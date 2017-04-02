@@ -35,7 +35,7 @@ public:
 	FORCEINLINE std::vector<GameFile>& GetGameFiles() { return GameFiles; }
 	FORCEINLINE std::vector<DatFile>& GetDatFiles() { return DatFiles; }
 
-	FORCEINLINE GameFile& operator[](int index) { return GameFiles[index]; }
+	FORCEINLINE GameFile& operator[](size_t index) { return GameFiles[index]; }
 	auto begin() { return GameFiles.begin(); }
 	auto end() { return GameFiles.end(); }
 };

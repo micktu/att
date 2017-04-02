@@ -16,6 +16,6 @@ void create_dir_recursive(wstr_t path);
 size_t get_file_size(const wstr_t& filename);
 wstr_t utf8_to_wstr(const char * bytes);
 std::string wstr_to_utf8(wstr_t str);
-wstr_vec_t find_files_recursive(wstr_t path, int pathSize);
+wstr_vec_t find_files_recursive(wstr_t path, size_t pathSize);
 wstr_vec_t find_files(wstr_t path);
 str_t format_loc_message(struct LocMessage &message);

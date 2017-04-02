@@ -76,13 +76,17 @@ void DoExtract(int &argc, wchar_t ** &argv)
 
 static const std::wregex SUB_REGEX(L"\\\\([a-zA-Z0-9]+)_?([a-zA-Z]+)?\\.dat$");
 
-void ProcessSubFile(GameFile *gf, std::map<std::wstring, sub_content>& subs)
+static wchar_t WCS_BUFFER[0x400];
+
+void ProcessSubFile(GameFile *gf, std::map<std::wstring, sub_content> *subs)
 {
-	if (subs.count(gf->Filename) < 1)
+	if (subs->count(gf->Filename) < 1)
 	{
-		subs.emplace(gf->Filename, sub_content());
+		subs->emplace(gf->Filename, sub_content());
 	}
-	sub_content &sc = subs[gf->Filename];
+	sub_content &sc = subs->at(gf->Filename);
+
+	//sub_content &sc = (*subs->try_emplace(gf->Filename).first).second;
 
 	DatFileEntry* dat = gf->GetResource();
 	wstr_t datPath(dat->Dat->GetPath());
@@ -96,15 +100,15 @@ void ProcessSubFile(GameFile *gf, std::map<std::wstring, sub_content>& subs)
 	std::ifstream* file = gf->GetResource()->OpenFile();
 	file->read((char *)&numEntries, sizeof(uint32_t));
 
-	wstr_t id(0x44, 0);
-	wstr_t val(0x400, 0);
+	wstr_t id;
+	wstr_t val;
 	for (uint32_t i = 0; i < numEntries; i++)
 	{
-		file->read((char*)id.c_str(), 0x44 * sizeof(wchar_t));
-		id.resize(wcslen(id.c_str()));
+		file->read((char*)WCS_BUFFER, 0x44 * sizeof(wchar_t));
+		id.assign(WCS_BUFFER);
 
-		file->read((char*)val.c_str(), 0x400 * sizeof(wchar_t));
-		val.resize(wcslen(val.c_str()));
+		file->read((char*)WCS_BUFFER, 0x400 * sizeof(wchar_t));
+		val.assign(WCS_BUFFER);
 
 		if (sc.count(id) < 1)
 		{
@@ -143,55 +147,73 @@ void ProcessSubFile(GameFile *gf, std::map<std::wstring, sub_content>& subs)
 		{
 			wc << L"WARNING: unknown suffix " << loc << L" in " << dat->Name;
 		}
+
 	}
 
 	delete file;
 }
 
-void ExportSubs(std::vector<GameFile*> &files, wstr_t outDir)
+void ExportSubs(std::vector<GameFile*> &files, wstr_t outPath)
 {
-	std::map<std::wstring, sub_content> subs;
+	auto *subs = new std::map<std::wstring, sub_content>();
 
 	for (GameFile* file : files)
 	{
 		ProcessSubFile(file, subs);
 	}
 
-	for (auto& pair : subs)
-	{
+	wstr_t outDir = outPath + L"subtitle\\";
+	create_dir_recursive(outDir);
 
+	std::ofstream file;
+
+	for (auto& pair : *subs)
+	{
+		wstr_t filename = outDir + pair.first;
+		filename += L".txt";
+
+		file.open(filename);
+		for (auto& mesPair : pair.second)
+		{
+			file << format_loc_message(mesPair.second) << std::endl;
+		}
+		file.close();
 	}
 
-	return;
+	delete subs;
 }
 
-void ExportBinFile(GameFile &gf, wstr_t outPath)
+void ExportBinFile(GameFile *gf, wstr_t outPath)
 {
-	return;
-
-	DatFileEntry* dat = gf.GetResource();
+	DatFileEntry* dat = gf->GetResource();
 	char *bin = dat->ReadFile();
-	ScriptContent* content = script_extract(bin);
+	ScriptContent* content = script_extract(bin, gf->Filename);
 
-
-	wstr_t outDir = outPath + add_slash(path_strip_filename(strip_slash(gf.Path)));
+	wstr_t outDir = outPath + add_slash(path_strip_filename(strip_slash(gf->Path)));
 	create_dir_recursive(outDir);
-	outDir += gf.Filename;
+	outDir += gf->Filename;
 
 	//script_dump_debug(bin, outDir + L".debug.txt", content);
 
 	if (nullptr != content)
 	{
 		script_export(content, outDir + L".txt");
-		wc << L"Done." << std::endl;
 	}
 	else
 	{
-		wc << L"Failed to load script." << std::endl;
+		wc << outDir << L" failed to load." << std::endl;
 	}
 
 	delete content;
 	delete bin;
+}
+
+void ExportScripts(std::vector<GameFile*> &files, wstr_t outPath)
+{
+	for (GameFile* gf : files)
+	{
+		ExportBinFile(gf, outPath);
+	}
 }
 
 void DoExport(int &argc, wchar_t ** &argv)
@@ -203,15 +225,17 @@ void DoExport(int &argc, wchar_t ** &argv)
 	GameData gd(path);
 	ReadGameData(gd, L"text", L"Exporting");
 
+	//wc << L"Reading files..." << std::endl;
+
+	std::vector<GameFile*> binFiles;
 	std::vector<GameFile*> subFiles;
 
 	for (GameFile& gf : gd)
 	{
-		wc << L"Processing " << gf.Filename << L"... ";
 
 		if (ext_equals(gf.Filename, L".bin"))
 		{
-			ExportBinFile(gf, outPath);
+			binFiles.push_back(&gf);
 		}
 		else if (ext_equals(gf.Filename, L".smd"))
 		{
@@ -219,9 +243,16 @@ void DoExport(int &argc, wchar_t ** &argv)
 		}
 	}
 
+	wc << L"Saving scripts..." << std::endl;
+	wc << std::endl;
+	ExportScripts(binFiles, outPath);
+	wc << std::endl;
+
+	wc << L"Saving subtitles..." << std::endl;
 	ExportSubs(subFiles, outPath);
 
-	wc << std::endl << L"Fin";
+	wc << std::endl;
+	wc << L"All done.";
 }
 
 void ReadGameData(GameData& gd, const wstr_t filter, const wstr_t verb)

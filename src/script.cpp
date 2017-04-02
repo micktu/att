@@ -2,11 +2,11 @@
 #include "utils.h"
 
 
-ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
+ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep, wstr_t & filename)
 {
 	ScriptContent* content = new ScriptContent();
 
-	int messageIndex;
+	int messageIndex = 0;
 	std::vector<const mrb_value*> messages;
 
 	TextState state = Idle;
@@ -48,7 +48,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 				continue;
 			}
 
-			printf("Expected OP_ARRAY, got %d @ %d | ", opcode, i);
+			wprintf_s(L"%s | Expected OP_ARRAY, got %d @ %d\r\n", filename.c_str(), opcode, i);
 			messages.clear();
 			state = Idle;
 			break;
@@ -78,7 +78,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 				continue;
 			}
 
-			printf("Expected OP_SETCONST, got %d @ %d | ", opcode, i);
+			wprintf_s(L"%s | Expected OP_SETCONST, got %d @ %d\r\n", filename.c_str(), opcode, i);
 			messages.clear();
 			state = Idle;
 			break;
@@ -94,7 +94,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 
 		if (s == nullptr)
 		{
-			wc << std::endl << L"WARNING: unnamed symbol @ " << i << L" ";
+			//wc << std::endl << L"WARNING: unnamed symbol @ " << i << L" ";
 			continue;
 		}
 
@@ -119,16 +119,16 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 
 	for (int i = 0; i < irep->rlen; i++)
 	{
-		ScriptContent* section = collect_dialogue(mrb, irep->reps[i]);
+		ScriptContent* section = collect_dialogue(mrb, irep->reps[i], filename);
 
 		auto& mes = content->Messages;
 		auto& smes = section->Messages;
 		mes.insert(mes.begin(), smes.begin(), smes.end());
 
-		for (str_vec_t& scene : section->Scenes)
+		for (str_vec_t& s : section->Scenes)
 		{
-			if (scene.empty()) continue;
-			content->Scenes.push_back(scene);
+			if (s.empty()) continue;
+			content->Scenes.push_back(s);
 		}
 
 		delete section;
@@ -137,7 +137,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 	return content;
 }
 
-ScriptContent* script_extract(const char* bin)
+ScriptContent* script_extract(const char* bin, wstr_t &filename)
 {
 	mrb_state* mrb = mrb_open();
 	mrb_irep* irep = mrb_read_irep(mrb, (uint8_t*)bin);
@@ -147,7 +147,7 @@ ScriptContent* script_extract(const char* bin)
 		return nullptr;
 	}
 
-	ScriptContent* content = collect_dialogue(mrb, irep);
+	ScriptContent* content = collect_dialogue(mrb, irep, filename);
 	mrb_close(mrb);
 
 	return content;
@@ -178,7 +178,7 @@ void script_export(ScriptContent* content, wstr_t filename)
 	{
 		str_vec_t &scene = content->Scenes[i];
 		
-		file << "### Scene " << i + 1 << std::endl << std::endl;
+		file << "-- Section " << i + 1 << std::endl << std::endl;
 
 		for (std::string &id : scene)
 		{
@@ -187,13 +187,12 @@ void script_export(ScriptContent* content, wstr_t filename)
 			if (message != nullptr)
 			{
 				file << format_loc_message(*message);
+				file << std::endl;
 			}
 			else
 			{
-				file << "ID: " << id << std::endl << "MESSAGE NOT FOUND" << std::endl;
+				std::cout << id << " not found." << std::endl;
 			}
-
-			file << std::endl;
 		}
 
 		file << std::endl;
@@ -298,7 +297,7 @@ void script_dump_debug(const char* bin, wstr_t out_filename, ScriptContent* cont
 	file.close();
 }
 
-char* script_import(const char* bin, const char* filename, int* size)
+char* script_import(const char* bin, const char* filename, size_t * size)
 {
 	// Open text file
 	// Find messages
@@ -307,7 +306,7 @@ char* script_import(const char* bin, const char* filename, int* size)
 	mrb_state* mrb = mrb_open();
 	mrb_irep* irep = mrb_read_irep(mrb, (uint8_t*)bin);
 
-	ScriptContent* content = collect_dialogue(mrb, irep);
+	//ScriptContent* content = collect_dialogue(mrb, irep, );
 
 	//ScriptMessage* message = script_find_messsage(*content, "M0010_S0005_S0000_101_a2b");
 
