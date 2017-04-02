@@ -1,8 +1,13 @@
 #include "DatFile.h"
 #include "utils.h"
 
-DatFileEntry::DatFileEntry(DatFile* dat, uint32_t index, str_t name, dat_size_t size, dat_offset_t offset) : Index(index), Name(name), Size(size), Offset(offset), Dat(dat)
+DatFileEntry::DatFileEntry(DatFile* dat, uint32_t index, wstr_t name, dat_size_t size, dat_offset_t offset) : Index(index), Name(name), Size(size), Offset(offset), Dat(dat)
 {
+}
+
+std::ifstream * DatFileEntry::OpenFile()
+{
+	return Dat->OpenFile(this);
 }
 
 char* DatFileEntry::ReadFile()
@@ -12,7 +17,7 @@ char* DatFileEntry::ReadFile()
 	return buffer;
 }
 
-bool DatFile::CheckFile(str_t &path)
+bool DatFile::CheckFile(wstr_t &path)
 {
 	uint32_t attributes = GetFileAttributes(path.c_str());
 
@@ -27,12 +32,12 @@ bool DatFile::CheckFile(str_t &path)
 	return DAT_MAGIC == magic;
 }
 
-DatFile::DatFile(const str_t &filename) : DatFile()
+DatFile::DatFile(const wstr_t &filename) : DatFile()
 {
 	Read(filename);
 }
 
-bool DatFile::Read(const str_t &filename)
+bool DatFile::Read(const wstr_t &filename)
 {
 	_path = filename;
 	_entries.clear();
@@ -85,6 +90,13 @@ bool DatFile::Read(const str_t &filename)
 	return true;
 }
 
+std::ifstream* DatFile::OpenFile(const DatFileEntry* entry)
+{
+	std::ifstream* file = new std::ifstream(_path, std::ios::binary);
+	file->seekg(entry->Offset);
+	return file;
+}
+
 void DatFile::ReadFile(const DatFileEntry* entry, char* buffer)
 {
 	std::ifstream file(_path, std::ios::binary);
@@ -111,7 +123,7 @@ void DatFile::InjectFile(int index, char * buffer, uint32_t numBytes)
 	file.close();
 }
 
-const DatFileEntry* DatFile::FindFile(str_t &name)
+const DatFileEntry* DatFile::FindFile(wstr_t &name)
 {
 	for (DatFileEntry &entry : _entries)
 	{
@@ -124,7 +136,7 @@ const DatFileEntry* DatFile::FindFile(str_t &name)
 	return nullptr;
 }
 
-void DatFile::ExtractFile(const DatFileEntry* entry, str_t outPath)
+void DatFile::ExtractFile(const DatFileEntry* entry, wstr_t outPath)
 {
 	char* buffer = new char[entry->Size];
 	ReadFile(entry, buffer);
@@ -137,7 +149,7 @@ void DatFile::ExtractFile(const DatFileEntry* entry, str_t outPath)
 	file.close();
 }
 
-void DatFile::ExtractAll(str_t &outPath)
+void DatFile::ExtractAll(wstr_t &outPath)
 {
 	for (DatFileEntry &entry : _entries)
 	{

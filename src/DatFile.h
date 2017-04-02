@@ -23,21 +23,23 @@ struct dat_header
 struct DatFileEntry
 {
 	DatFileEntry() = default;
-	DatFileEntry(class DatFile* dat, uint32_t index, str_t name, dat_size_t size, dat_offset_t offset);
+	DatFileEntry(class DatFile* dat, uint32_t index, wstr_t name, dat_size_t size, dat_offset_t offset);
+
+	std::ifstream * OpenFile();
 
 	uint32_t Index;
-	str_t Name;
+	wstr_t Name;
 	dat_size_t Size;
 	dat_offset_t Offset;
 
 	DatFile* Dat;
 
-	char* ReadFile();
+	char * ReadFile();
 };
 
 class DatFile
 {
-	str_t _path;
+	wstr_t _path;
 	std::vector<DatFileEntry> _entries;
 	dat_header _header;
 
@@ -46,20 +48,21 @@ public:
 private:
 
 public:
-	static bool CheckFile(str_t &path);
+	static bool CheckFile(wstr_t &path);
 
 	DatFile() = default;
 	DatFile(const DatFile &obj) = default;
-	DatFile(const str_t &path);
+	DatFile(const wstr_t &path);
 
-	bool Read(const str_t &filename);
+	bool Read(const wstr_t &filename);
+	std::ifstream * OpenFile(const DatFileEntry * entry);
 	void ReadFile(const DatFileEntry* entry, char* buffer);
 	void InjectFile(int index, char * buffer, uint32_t numBytes);
-	const DatFileEntry* FindFile(str_t &name);
-	void ExtractFile(const DatFileEntry* entry, str_t outPath);
-	void ExtractAll(str_t &outPath);
+	const DatFileEntry * FindFile(wstr_t &name);
+	void ExtractFile(const DatFileEntry* entry, wstr_t outPath);
+	void ExtractAll(wstr_t &outPath);
 
-	FORCEINLINE str_t GetPath() const { return _path; }
+	FORCEINLINE wstr_t GetPath() const { return _path; }
 	FORCEINLINE size_t NumEntries() const { return _entries.size(); }
 	FORCEINLINE DatFileEntry& operator[](int index) { return _entries[index]; }
 

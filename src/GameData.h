@@ -6,11 +6,11 @@
 
 class GameData
 {
-	static const ext_vector_t DAT_EXTENSIONS;
-	static const ext_vector_t TEXT_EXTENSIONS;
+	static const wcs_vector_t DAT_EXTENSIONS;
+	static const wcs_vector_t TEXT_EXTENSIONS;
 
-	str_t BasePath;
-	str_vector_t Filenames;
+	wstr_t BasePath;
+	wstr_vec_t Filenames;
 	std::vector<DatFile> DatFiles;
 	std::vector<GameFile> GameFiles;
 
@@ -20,18 +20,18 @@ private:
 
 public:
 	GameData() = default;
-	GameData(str_t &path);
+	GameData(wstr_t &path);
 
-	bool Read(str_t filter);
+	bool Read(wstr_t filter);
 
-	FORCEINLINE void ProcessFile(const str_t &filename, const str_t &filter);
-	bool CheckExtension(const str_t &filename, const ext_vector_t & list) const;
-	FORCEINLINE bool IsDatFile(const str_t &filename) const;
-	FORCEINLINE bool IsTextFile(const str_t &filename) const;
-	FORCEINLINE bool IsRelevantFile(const str_t &filename, str_t filter) const;
+	FORCEINLINE void ProcessFile(const wstr_t &filename, const wstr_t &filter);
+	bool CheckExtension(const wstr_t &filename, const wcs_vector_t & list) const;
+	FORCEINLINE bool IsDatFile(const wstr_t &filename) const;
+	FORCEINLINE bool IsTextFile(const wstr_t &filename) const;
+	FORCEINLINE bool IsRelevantFile(const wstr_t &filename, wstr_t filter) const;
 
-	FORCEINLINE str_t GetBasePath() { return BasePath; }
-	FORCEINLINE str_vector_t& GetFilenames() { return Filenames; }
+	FORCEINLINE wstr_t GetBasePath() { return BasePath; }
+	FORCEINLINE wstr_vec_t& GetFilenames() { return Filenames; }
 	FORCEINLINE std::vector<GameFile>& GetGameFiles() { return GameFiles; }
 	FORCEINLINE std::vector<DatFile>& GetDatFiles() { return DatFiles; }
 

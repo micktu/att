@@ -5,67 +5,69 @@
 #include <locale>
 #include <codecvt>
 
+#include "script.h"
+
 static wchar_t PATH_BUFFER[MAX_PATH];
 
-str_t path_strip_filename(str_t filename)
+wstr_t path_strip_filename(wstr_t filename)
 {
 	wcscpy_s(PATH_BUFFER, MAX_PATH, filename.c_str());
 	PathCchRemoveFileSpec(PATH_BUFFER, MAX_PATH);
-	return str_t(PATH_BUFFER);
+	return wstr_t(PATH_BUFFER);
 }
 
-str_t path_normalize(str_t path)
+wstr_t path_normalize(wstr_t path)
 {
 	GetFullPathName(path.c_str(), MAX_PATH, PATH_BUFFER, nullptr);
 	//PathCchCanonicalize(PATH_BUFFER, MAX_PATH, path.c_str());
-	return str_t(PATH_BUFFER);
+	return wstr_t(PATH_BUFFER);
 }
 
-void split_path(const str_t &str, str_t &path, str_t &name, str_t &ext)
+void split_path(const wstr_t &str, wstr_t &path, wstr_t &name, wstr_t &ext)
 {
 	wchar_t *cext;
 	wchar_t *cname = PathFindFileName(str.c_str());
 	PathCchFindExtension(cname, MAX_PATH, &cext);
 
-	name = str_t(cname);
-	ext = str_t(cext);
+	name = wstr_t(cname);
+	ext = wstr_t(cext);
 	path = str.substr(0, str.length() - name.length());
 }
 
-str_t strip_slash(const str_t &path)
+wstr_t strip_slash(const wstr_t &path)
 {
 	wcscpy_s(PATH_BUFFER, MAX_PATH, path.c_str());
 	if (S_OK == PathCchRemoveBackslash(PATH_BUFFER, MAX_PATH))
 	{
-		return str_t(PATH_BUFFER);
+		return wstr_t(PATH_BUFFER);
 	}
 
 	return path;
 }
 
-str_t add_slash(const str_t &path)
+wstr_t add_slash(const wstr_t &path)
 {
 	//path.copy(PATH_BUFFER, MAX_PATH);
 	wcscpy_s(PATH_BUFFER, path.c_str());
 	if (S_OK == PathCchAddBackslash(PATH_BUFFER, MAX_PATH))
 	{
-		return str_t(PATH_BUFFER);
+		return wstr_t(PATH_BUFFER);
 	}
 
 	return path;
 }
 
-str_vector_t find_files_recursive(str_t path, int pathSize = -1)
+wstr_vec_t find_files_recursive(wstr_t path, int pathSize = -1)
 {
 	if (pathSize < 0) pathSize = path.size() - 1;
 	
-	str_t dirMask = path + L"*";
+	wstr_t dirMask = path + L"*";
 
 	WIN32_FIND_DATA ffd;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 	hFind = FindFirstFile(dirMask.c_str(), &ffd);
 
-	str_vector_t files;
+	wstr_vec_t files;
 	if (INVALID_HANDLE_VALUE == hFind) return files;
 
 	do
@@ -76,11 +78,11 @@ str_vector_t find_files_recursive(str_t path, int pathSize = -1)
 			continue;
 		}
 
-		str_t filename = path + name;
+		wstr_t filename = path + name;
 		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 		{
 			filename += '\\';
-			str_vector_t inner = find_files_recursive(filename, pathSize);
+			wstr_vec_t inner = find_files_recursive(filename, pathSize);
 			files.insert(files.end(), inner.begin(), inner.end());
 			continue;
 		}
@@ -94,20 +96,32 @@ str_vector_t find_files_recursive(str_t path, int pathSize = -1)
 	return files;
 }
 
-str_vector_t find_files(str_t path)
+wstr_vec_t find_files(wstr_t path)
 {
-	if (!is_dir(path)) return str_vector_t();
+	if (!is_dir(path)) return wstr_vec_t();
 	return find_files_recursive(path);
 }
 
-void create_dir_recursive(str_t path)
+str_t format_loc_message(LocMessage &message)
+{
+	std::stringstream str;
+	
+	str << "ID: " << message.Id << std::endl;
+	str << "JP: " << message.Jp << std::endl;
+	str << "EN: " << message.En << std::endl;
+	str << "RU: " << "" << std::endl;
+
+	return str.str();
+}
+
+void create_dir_recursive(wstr_t path)
 {
 	wchar_t fullPath[MAX_PATH];
 	GetFullPathName(path.c_str(), MAX_PATH, fullPath, NULL);
 	SHCreateDirectoryEx(NULL, fullPath, NULL);
 }
 
-str_t cstr_to_wstr(const char* cstr)
+wstr_t cstr_to_wstr(const char* cstr)
 {
 	size_t len = strlen(cstr);
 	wchar_t* buf = new wchar_t[len + 1];
@@ -115,30 +129,30 @@ str_t cstr_to_wstr(const char* cstr)
 	size_t numChars;
 	mbstowcs_s(&numChars, buf, len + 1, cstr, len);
 
-	str_t wstr(buf);
+	wstr_t wstr(buf);
 	delete[] buf;
 	return wstr;
 }
 
-bool ext_equals(const str_t & filename, const wchar_t * ext)
+bool ext_equals(const wstr_t & filename, const wchar_t * ext)
 {
 	return wcs_as_long(ext) == wcs_as_long(filename.c_str() + filename.length() - 4);
 }
 
-size_t get_file_size(const str_t& filename)
+size_t get_file_size(const wstr_t& filename)
 {
 	std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
 	return in.tellg();
 	in.close();
 }
 
-str_t utf8_to_wstr(const char* bytes)
+wstr_t utf8_to_wstr(const char* bytes)
 {
 	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> convert;
 	return convert.from_bytes(bytes);
 }
 
-std::string wstr_to_utf8(str_t str)
+std::string wstr_to_utf8(wstr_t str)
 {
 	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> convert;
 	return convert.to_bytes(str);

@@ -7,7 +7,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 	ScriptContent* content = new ScriptContent();
 
 	int messageIndex;
-	std::vector<mrb_value*> messages;
+	std::vector<const mrb_value*> messages;
 
 	TextState state = Idle;
 
@@ -28,7 +28,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 				messages.push_back(&irep->pool[index]);
 				state = CollectingStrings;
 
-				if (messages.size() > 7) state = ExpectingArray;
+				if (messages.size() > 5) state = ExpectingArray;
 				continue;
 			}
 
@@ -42,6 +42,11 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 				state = ExpectingID;
 				continue;
 			}
+			else if (OP_STRING == opcode && messages.size() < 8)
+			{
+				messages.push_back(&irep->pool[GETARG_Bx(code)]);
+				continue;
+			}
 
 			printf("Expected OP_ARRAY, got %d @ %d | ", opcode, i);
 			messages.clear();
@@ -51,18 +56,21 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 		case ExpectingID:
 			if (OP_SETCONST == opcode)
 			{
-				ScriptMessage message;
+				LocMessage message;
+				message.Index = messageIndex;
+				message.irep = irep;
+
 				message.Id = mrb_sym2name(mrb, irep->syms[GETARG_Bx(code)]);
+
 				message.Jp = rstring_to_string(messages[0]);
 				message.En = rstring_to_string(messages[1]);
 				message.Fr = rstring_to_string(messages[2]);
 				message.It = rstring_to_string(messages[3]);
 				message.De = rstring_to_string(messages[4]);
 				message.Sp = rstring_to_string(messages[5]);
-				message.Kr = rstring_to_string(messages[6]);
-				message.Cn = rstring_to_string(messages[7]);
-				message.Index = messageIndex;
-				message.irep = irep;
+				//message.Kr = rstring_to_string(messages[6]);
+				//message.Cn = rstring_to_string(messages[7]);
+				
 				content->Messages.push_back(message);
 
 				state = Idle;
@@ -78,7 +86,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 	}
 
 	bool bFound = false;
-	std::vector<std::string> scene;
+	str_vec_t scene;
 
 	for (int i = 0; i < irep->slen; i++)
 	{
@@ -86,7 +94,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 
 		if (s == nullptr)
 		{
-			wcout << std::endl << L"WARNING: unnamed symbol @ " << i << L" ";
+			wc << std::endl << L"WARNING: unnamed symbol @ " << i << L" ";
 			continue;
 		}
 
@@ -117,7 +125,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep)
 		auto& smes = section->Messages;
 		mes.insert(mes.begin(), smes.begin(), smes.end());
 
-		for (std::vector<std::string>& scene : section->Scenes)
+		for (str_vec_t& scene : section->Scenes)
 		{
 			if (scene.empty()) continue;
 			content->Scenes.push_back(scene);
@@ -145,14 +153,14 @@ ScriptContent* script_extract(const char* bin)
 	return content;
 }
 
-void script_export(ScriptContent* content, str_t filename)
+void script_export(ScriptContent* content, wstr_t filename)
 {
 	if (content->Scenes.empty())
 	{
 		if (!content->Messages.empty())
 		{
-			wcout << L"Warning: " << content->Messages.size() << L" messages, ";
-			wcout << content->Scenes.size() << L" scenes in " << filename;
+			wc << L"Warning: " << content->Messages.size() << L" messages, ";
+			wc << content->Scenes.size() << L" scenes in " << filename;
 		}
 
 		return;
@@ -162,26 +170,23 @@ void script_export(ScriptContent* content, str_t filename)
 
 	if (!file.is_open())
 	{
-		wcout << "Cannot write file " << filename;
+		wc << "Cannot write file " << filename;
 		return;
 	}
 
 	for (int i = 0; i < content->Scenes.size(); i++)
 	{
-		std::vector<std::string> &scene = content->Scenes[i];
+		str_vec_t &scene = content->Scenes[i];
 		
 		file << "### Scene " << i + 1 << std::endl << std::endl;
 
 		for (std::string &id : scene)
 		{
-			const ScriptMessage* message = script_find_messsage(content, id);
+			LocMessage* message = script_find_messsage(content, id);
 
 			if (message != nullptr)
 			{
-				file << "ID: " << id << std::endl;
-				file << "JP: " << message->Jp << std::endl;
-				file << "EN: " << message->En << std::endl;
-				file << "RU: " << "" << std::endl;
+				file << format_loc_message(*message);
 			}
 			else
 			{
@@ -252,7 +257,7 @@ void fprint_irep(mrb_state* mrb, mrb_irep* irep, std::ofstream &out)
 	}
 }
 
-void script_dump_debug(const char* bin, str_t out_filename, ScriptContent* content)
+void script_dump_debug(const char* bin, wstr_t out_filename, ScriptContent* content)
 {
 	mrb_state* mrb = mrb_open();
 	mrb_irep* irep = mrb_read_irep(mrb, (uint8_t*)bin);
@@ -265,7 +270,7 @@ void script_dump_debug(const char* bin, str_t out_filename, ScriptContent* conte
 
 	if (content != nullptr)
 	{
-		for (ScriptMessage &message : content->Messages)
+		for (LocMessage &message : content->Messages)
 		{
 			file << std::endl;
 			file << "ID :" << message.Id << std::endl;
@@ -275,11 +280,11 @@ void script_dump_debug(const char* bin, str_t out_filename, ScriptContent* conte
 			file << "IT :" << message.It << std::endl;
 			file << "DE :" << message.De << std::endl;
 			file << "SP :" << message.Sp << std::endl;
-			file << "KR :" << message.Kr << std::endl;
-			file << "CN :" << message.Cn << std::endl;
+			//file << "KR :" << message.Kr << std::endl;
+			//file << "CN :" << message.Cn << std::endl;
 		}
 
-		for (std::vector<std::string> &scene : content->Scenes)
+		for (str_vec_t &scene : content->Scenes)
 		{
 			file << std::endl;
 
@@ -329,9 +334,9 @@ char* script_import(const char* bin, const char* filename, int* size)
 
 }
 
-ScriptMessage* script_find_messsage(ScriptContent *content, std::string id)
+LocMessage* script_find_messsage(ScriptContent *content, std::string id)
 {
-	for (ScriptMessage &message : content->Messages)
+	for (LocMessage &message : content->Messages)
 	{
 		if (message.Id.compare(id) == 0)
 		{

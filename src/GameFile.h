@@ -2,20 +2,24 @@
 
 #include "stdafx.h"
 
-
-class DatFile;
+class GameData;
+struct DatFileEntry;
 
 struct GameFile
 {
 	GameFile() = default;
-	GameFile(str_t filename, size_t index, size_t size = -1, size_t datIndex = -1, size_t indexInDat = -1);
+	GameFile(GameData *gf, const wstr_t &filename, size_t index, size_t size = -1, size_t datIndex = -1, size_t indexInDat = -1);
 
-	str_t Path;
-	str_t Filename;
-	str_t Extension;
+	wstr_t Path;
+	wstr_t Filename;
+	wstr_t Extension;
 
 	size_t Index;
 	size_t Size;
 	size_t DatIndex;
 	size_t IndexInDat;
+
+	GameData *Data;
+
+	DatFileEntry* GetResource() const;
 };
