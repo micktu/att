@@ -103,7 +103,7 @@ wstr_vec_t find_files(wstr_t path)
 	return find_files_recursive(path);
 }
 
-static const std::regex CRLF_REGEX("\\r\\n");
+static const std::regex CRLF_REGEX("\\r?\\n");
 #define rep_crlf(str) std::regex_replace(str, CRLF_REGEX, "\\n")
 
 str_t format_loc_message(LocMessage &message)

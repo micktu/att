@@ -74,34 +74,47 @@ void DoExtract(int &argc, wchar_t ** &argv)
 	}
 }
 
-static const std::wregex SUB_REGEX(L"\\\\([a-zA-Z0-9]+)_?([a-zA-Z]+)?\\.dat$");
+static const std::wregex SUB_REGEX(L"\\\\\\w+?(_([a-zA-Z]{2}))?\\.dat");
 
-static wchar_t WCS_BUFFER[0x400];
+static wchar_t WCS_BUFFER[0x999]; // Hey I can do that too
 
-void ProcessSubFile(GameFile *gf, std::map<std::wstring, sub_content> *subs)
+std::map<wstr_t, wstr_t> ReadTmdFile(GameFile* gf)
 {
-	if (subs->count(gf->Filename) < 1)
-	{
-		subs->emplace(gf->Filename, sub_content());
-	}
-	sub_content &sc = subs->at(gf->Filename);
-
-	//sub_content &sc = (*subs->try_emplace(gf->Filename).first).second;
-
-	DatFileEntry* dat = gf->GetResource();
-	wstr_t datPath(dat->Dat->GetPath());
-
-
-	std::wsmatch match;
-	std::regex_search(datPath, match, SUB_REGEX);
-	const wstr_t &loc = match[2].str();
-
 	uint32_t numEntries;
 	std::ifstream* file = gf->GetResource()->OpenFile();
 	file->read((char *)&numEntries, sizeof(uint32_t));
 
-	wstr_t id;
-	wstr_t val;
+	uint32_t idLen, valLen;
+	wstr_t id, val;
+	std::map<wstr_t, wstr_t> lines;
+	
+	for (uint32_t i = 0; i < numEntries; i++)
+	{
+		file->read((char *)&idLen, sizeof(uint32_t));
+		file->read((char*)WCS_BUFFER, idLen * sizeof(wchar_t));
+		id.assign(WCS_BUFFER);
+
+		file->read((char *)&valLen, sizeof(uint32_t));
+		file->read((char*)WCS_BUFFER, valLen * sizeof(wchar_t));
+		val.assign(WCS_BUFFER);
+
+		lines.emplace(id, val);
+	}
+
+	delete file;
+
+	return lines;
+}
+
+std::map<wstr_t, wstr_t> ReadSmdFile(GameFile* gf)
+{
+	uint32_t numEntries;
+	std::ifstream* file = gf->GetResource()->OpenFile();
+	file->read((char *)&numEntries, sizeof(uint32_t));
+
+	wstr_t id, val;
+	std::map<wstr_t, wstr_t> lines;
+
 	for (uint32_t i = 0; i < numEntries; i++)
 	{
 		file->read((char*)WCS_BUFFER, 0x44 * sizeof(wchar_t));
@@ -110,14 +123,43 @@ void ProcessSubFile(GameFile *gf, std::map<std::wstring, sub_content> *subs)
 		file->read((char*)WCS_BUFFER, 0x400 * sizeof(wchar_t));
 		val.assign(WCS_BUFFER);
 
-		if (sc.count(id) < 1)
-		{
-			sc.emplace(id, LocMessage());
-			sc[id].Id = wstr_to_utf8(id);
-		}
+		lines.emplace(id, val);
+	}
 
-		LocMessage &line = sc[id];
-		str_t text = wstr_to_utf8(val);
+	delete file;
+
+	return lines;
+}
+
+void ProcessStringFile(GameFile *gf, std::map<std::wstring, mess_map> *strMap)
+{
+	//sub_content &sc = (*subs->try_emplace(gf->Filename).first).second;
+
+	DatFileEntry* dat = gf->GetResource();
+	wstr_t datPath(dat->Dat->GetPath());
+
+	std::wsmatch match;
+	std::regex_search(datPath, match, SUB_REGEX);
+	const wstr_t &loc = match[2].str();
+
+	if (strMap->count(gf->Filename) < 1)
+	{
+		strMap->emplace(gf->Filename, mess_map());
+	}
+	mess_map &mesMap = strMap->at(gf->Filename);
+
+	auto lines = ext_equals(gf->Filename, L".tmd") ? ReadTmdFile(gf) : ReadSmdFile(gf);
+
+	for (auto &pair : lines)
+	{
+		if (mesMap.count(pair.first) < 1)
+		{
+			mesMap.emplace(pair.first, LocMessage());
+			mesMap[pair.first].Id = wstr_to_utf8(pair.first);
+		}
+		LocMessage &line = mesMap[pair.first];
+
+		str_t text = wstr_to_utf8(pair.second);
 
 		if (loc.empty())
 		{
@@ -143,33 +185,55 @@ void ProcessSubFile(GameFile *gf, std::map<std::wstring, sub_content> *subs)
 		{
 			line.Sp = text;
 		}
+		else if (loc.compare(L"kr") == 0)
+		{
+			line.Kr = text;
+		}
+		else if (loc.compare(L"cn") == 0)
+		{
+			line.Cn = text;
+		}
 		else
 		{
-			wc << L"WARNING: unknown suffix " << loc << L" in " << dat->Name;
+			wc << L"WARNING: unknown suffix " << loc << L" in " << dat->Name << std::endl;
 		}
-
 	}
-
-	delete file;
 }
 
-void ExportSubs(std::vector<GameFile*> &files, wstr_t outPath)
+void ExportStrings(std::vector<GameFile*> &files, wstr_t outPath)
 {
-	auto *subs = new std::map<std::wstring, sub_content>();
+	auto *strMap = new std::map<std::wstring, mess_map>();
 
 	for (GameFile* file : files)
 	{
-		ProcessSubFile(file, subs);
+		ProcessStringFile(file, strMap);
 	}
-
-	wstr_t outDir = outPath + L"subtitle\\";
-	create_dir_recursive(outDir);
-
+	
+	wstr_t strDir = outPath + L"txtmess\\";
+	create_dir_recursive(strDir);
+	
+	wstr_t subDir = outPath + L"subtitle\\";
+	create_dir_recursive(subDir);
+	
 	std::ofstream file;
 
-	for (auto& pair : *subs)
+	size_t strCount = 0, subCount = 0;
+
+	for (auto& pair : *strMap)
 	{
-		wstr_t filename = outDir + pair.first;
+		wstr_t filename;
+		if (ext_equals(pair.first, L".tmd"))
+		{
+			strCount += pair.second.size();
+			filename.assign(strDir);
+		}
+		else
+		{
+			subCount += pair.second.size();
+			filename.assign(subDir);
+		}
+
+		filename += pair.first;
 		filename += L".txt";
 
 		file.open(filename);
@@ -177,13 +241,17 @@ void ExportSubs(std::vector<GameFile*> &files, wstr_t outPath)
 		{
 			file << format_loc_message(mesPair.second) << std::endl;
 		}
+
 		file.close();
 	}
 
-	delete subs;
+	wc << "String lines: " << strCount << std::endl;
+	wc << "Subtitle lines: " << subCount << std::endl;
+
+	delete strMap;
 }
 
-void ExportBinFile(GameFile *gf, wstr_t outPath)
+size_t ExportBinFile(GameFile *gf, wstr_t outPath)
 {
 	DatFileEntry* dat = gf->GetResource();
 	char *bin = dat->ReadFile();
@@ -195,8 +263,11 @@ void ExportBinFile(GameFile *gf, wstr_t outPath)
 
 	//script_dump_debug(bin, outDir + L".debug.txt", content);
 
+	size_t count = 0;
+
 	if (nullptr != content)
 	{
+		count = content->Messages.size();
 		script_export(content, outDir + L".txt");
 	}
 	else
@@ -206,14 +277,20 @@ void ExportBinFile(GameFile *gf, wstr_t outPath)
 
 	delete content;
 	delete bin;
+
+	return count;
 }
 
 void ExportScripts(std::vector<GameFile*> &files, wstr_t outPath)
 {
+	size_t count = 0;
+
 	for (GameFile* gf : files)
 	{
-		ExportBinFile(gf, outPath);
+		count += ExportBinFile(gf, outPath);
 	}
+
+	wc << L"Script lines: " << count << std::endl;
 }
 
 void DoExport(int &argc, wchar_t ** &argv)
@@ -227,31 +304,31 @@ void DoExport(int &argc, wchar_t ** &argv)
 
 	//wc << L"Reading files..." << std::endl;
 
-	std::vector<GameFile*> binFiles;
-	std::vector<GameFile*> subFiles;
+	std::vector<GameFile*> scriptFiles;
+	std::vector<GameFile*> stringFiles;
 
 	for (GameFile& gf : gd)
 	{
 
 		if (ext_equals(gf.Filename, L".bin"))
 		{
-			binFiles.push_back(&gf);
+			scriptFiles.push_back(&gf);
 		}
-		else if (ext_equals(gf.Filename, L".smd"))
+		else if (ext_equals(gf.Filename, L".smd") || ext_equals(gf.Filename, L".tmd"))
 		{
-			subFiles.push_back(&gf);
+			stringFiles.push_back(&gf);
 		}
 	}
 
 	wc << L"Saving scripts..." << std::endl;
 	wc << std::endl;
-	ExportScripts(binFiles, outPath);
+	ExportScripts(scriptFiles, outPath);
 	wc << std::endl;
 
-	wc << L"Saving subtitles..." << std::endl;
-	ExportSubs(subFiles, outPath);
-
+	wc << L"Saving strings..." << std::endl;
+	ExportStrings(stringFiles, outPath);
 	wc << std::endl;
+
 	wc << L"All done.";
 }
 

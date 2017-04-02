@@ -43,7 +43,7 @@ struct LocMessage
 	int Index;
 };
 
-using sub_content = std::map<std::wstring, LocMessage>;
+using mess_map = std::map<std::wstring, LocMessage>;
 
 struct ScriptContent
 {
