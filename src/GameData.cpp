@@ -24,45 +24,38 @@ bool GameData::Read(wstr_t filter)
 
 	for (wstr_t& filename : Filenames)
 	{
-		ProcessFile(filename, filter);
+		wstr_t filePath = BasePath + filename;
+
+		if (!IsDatFile(filePath) && IsRelevantFile(filename, filter))
+		{
+			GameFile gf(this, filename, GameFiles.size(), get_file_size(filePath));
+			GameFiles.emplace(filePath, gf);
+			continue;
+		}
+
+		if (IsDatFile(filename))
+		{
+			size_t datIndex = DatFiles.size();
+			DatFiles.emplace_back(BasePath, filename);
+			DatFile &df = DatFiles.back();
+
+			wstr_t relPath = add_slash(filename);
+
+			int i = 0;
+			for (DatFileEntry &entry : df)
+			{
+				if (IsRelevantFile(entry.Name, filter))
+				{
+					wstr_t fullName = relPath + entry.Name;
+					GameFile gf(this, fullName, GameFiles.size(), entry.Size, datIndex, i);
+					GameFiles.emplace(fullName, gf);
+				}
+				i++;
+			}
+		}
 	}
 
 	return true;
-}
-
-void GameData::ProcessFile(wstr_t &filename, const wstr_t &filter)
-{
-	wstr_t filePath = BasePath + filename;
-
-	if (!IsDatFile(filePath) && IsRelevantFile(filename, filter))
-	{
-		GameFile gf(this, filename, GameFiles.size(), get_file_size(filePath));
-		GameFiles.emplace(filePath, gf);
-		return;
-	}
-
-	if (IsDatFile(filename))
-	{
-		size_t datIndex = DatFiles.size();
-		DatFiles.emplace_back(BasePath, filename);
-		DatFile &df = DatFiles.back();
-
-		wstr_t relPath = add_slash(filename);
-
-		int i = 0;
-		for (DatFileEntry &entry : df)
-		{
-			if (IsRelevantFile(entry.Name, filter))
-			{
-				wstr_t fullName = relPath + entry.Name;
-				GameFile gf(this, fullName, GameFiles.size(), entry.Size, datIndex, i);
-				GameFiles.emplace(fullName, gf);
-			}
-			++i;
-		}
-
-		return;
-	}
 }
 
 bool GameData::CheckExtension(const wstr_t &filename, const wcs_vector_t &list) const
@@ -89,7 +82,7 @@ bool GameData::IsRelevantFile(const wstr_t &filename, wstr_t filter) const
 {
 	if (filter.empty()) return true;
 
-	std::transform(filter.begin(), filter.end(), filter.begin(), ::tolower);
+	std::transform(filter.begin(), filter.end(), filter.begin(), ::towlower);
 
 	if (filter.compare(L"data") == 0)
 	{

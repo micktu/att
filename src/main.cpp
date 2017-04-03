@@ -8,7 +8,7 @@
 #include "utils.h"
 
 
-int wmain(int argc, wchar_t *argv[], wchar_t *envp[])
+int wmain(int argc, wchar_t *argv[])
 {
 	if (argc < 2)
 	{
@@ -79,96 +79,98 @@ void DoExtract(int &argc, wchar_t ** &argv)
 static const std::wregex STR_FILE_REGEX(L"\\\\\\w+?(_([a-zA-Z]{2}))?\\.dat");
 static wchar_t WCS_BUFFER[0x2B2B];
 
-void ProcessStringFile(GameFile *gf, std::map<std::wstring, mess_map> *strMap)
+std::map<std::wstring, mess_map> LoadStrings(std::vector<GameFile*> files)
 {
-	DatFileEntry* dat = gf->GetDatEntry();
-	wstr_t datPath(dat->Dat->GetPath());
-
-	std::wsmatch match;
-	std::regex_search(datPath, match, STR_FILE_REGEX);
-	const wstr_t &loc = match[2].str();
-
-	if (strMap->count(gf->Filename) < 1)
+	std::map<std::wstring, mess_map> strMap;
+	
+	for (GameFile* gf : files)
 	{
-		strMap->emplace(gf->Filename, mess_map());
+		DatFileEntry* dat = gf->GetDatEntry();
+		wstr_t datPath(dat->Dat->GetPath());
+
+		std::wsmatch match;
+		std::regex_search(datPath, match, STR_FILE_REGEX);
+		const wstr_t &loc = match[2].str();
+
+		if (strMap.count(gf->Filename) < 1)
+		{
+			strMap.emplace(gf->Filename, mess_map());
+		}
+		mess_map &mesMap = strMap.at(gf->Filename);
+
+		uint32_t numEntries;
+		std::ifstream file = gf->GetDatEntry()->OpenFile();
+		file.read((char *)&numEntries, sizeof(uint32_t));
+
+		bool bIsVarLength = ext_equals(gf->Filename, L".tmd");
+		uint32_t idLen = 0x44, valLen = 0x400;
+		wstr_t id, val;
+		std::map<wstr_t, wstr_t> lines;
+
+		for (uint32_t i = 0; i < numEntries; i++)
+		{
+			if (bIsVarLength) file.read((char *)&idLen, sizeof(uint32_t));
+			file.read((char*)WCS_BUFFER, idLen * sizeof(wchar_t));
+			id.assign(WCS_BUFFER);
+
+			if (bIsVarLength) file.read((char *)&valLen, sizeof(uint32_t));
+			file.read((char*)WCS_BUFFER, valLen * sizeof(wchar_t));
+			val.assign(WCS_BUFFER);
+
+			if (mesMap.count(id) < 1)
+			{
+				mesMap.emplace(id, LocMessage());
+				mesMap[id].Id = wstr_to_utf8(id);
+			}
+			LocMessage &line = mesMap[id];
+
+			str_t text = wstr_to_utf8(val);
+
+			if (loc.empty())
+			{
+				line.Jp = text;
+			}
+			else if (loc.compare(L"us") == 0)
+			{
+				line.En = text;
+			}
+			else if (loc.compare(L"fr") == 0)
+			{
+				line.Fr = text;
+			}
+			else if (loc.compare(L"it") == 0)
+			{
+				line.It = text;
+			}
+			else if (loc.compare(L"de") == 0)
+			{
+				line.De = text;
+			}
+			else if (loc.compare(L"es") == 0)
+			{
+				line.Sp = text;
+			}
+			else if (loc.compare(L"kr") == 0)
+			{
+				line.Kr = text;
+			}
+			else if (loc.compare(L"cn") == 0)
+			{
+				line.Cn = text;
+			}
+			else
+			{
+				wc << L"WARNING: unknown suffix " << loc << L" in " << dat->Name << std::endl;
+			}
+		}
 	}
-	mess_map &mesMap = strMap->at(gf->Filename);
-
-	uint32_t numEntries;
-	std::ifstream file = gf->GetDatEntry()->OpenFile();
-	file.read((char *)&numEntries, sizeof(uint32_t));
-
-	bool bIsVarLength = ext_equals(gf->Filename, L".tmd");
-	uint32_t idLen = 0x44, valLen = 0x400;
-	wstr_t id, val;
-	std::map<wstr_t, wstr_t> lines;
-
-	for (uint32_t i = 0; i < numEntries; i++)
-	{
-		if (bIsVarLength) file.read((char *)&idLen, sizeof(uint32_t));
-		file.read((char*)WCS_BUFFER, idLen * sizeof(wchar_t));
-		id.assign(WCS_BUFFER);
-
-		if (bIsVarLength) file.read((char *)&valLen, sizeof(uint32_t));
-		file.read((char*)WCS_BUFFER, valLen * sizeof(wchar_t));
-		val.assign(WCS_BUFFER);
-
-		if (mesMap.count(id) < 1)
-		{
-			mesMap.emplace(id, LocMessage());
-			mesMap[id].Id = wstr_to_utf8(id);
-		}
-		LocMessage &line = mesMap[id];
-
-		str_t text = wstr_to_utf8(val);
-
-		if (loc.empty())
-		{
-			line.Jp = text;
-		}
-		else if (loc.compare(L"us") == 0)
-		{
-			line.En = text;
-		}
-		else if (loc.compare(L"fr") == 0)
-		{
-			line.Fr = text;
-		}
-		else if (loc.compare(L"it") == 0)
-		{
-			line.It = text;
-		}
-		else if (loc.compare(L"de") == 0)
-		{
-			line.De = text;
-		}
-		else if (loc.compare(L"es") == 0)
-		{
-			line.Sp = text;
-		}
-		else if (loc.compare(L"kr") == 0)
-		{
-			line.Kr = text;
-		}
-		else if (loc.compare(L"cn") == 0)
-		{
-			line.Cn = text;
-		}
-		else
-		{
-			wc << L"WARNING: unknown suffix " << loc << L" in " << dat->Name << std::endl;
-		}
-	}
+	
+	return strMap;
 }
 
 void ExportStrings(std::vector<GameFile*> &files, wstr_t outPath)
 {
-	auto *strMap = new std::map<std::wstring, mess_map>();
-
-	for (GameFile* file : files)
-	{
-		ProcessStringFile(file, strMap);
-	}
+	std::map<std::wstring, mess_map> strMap = LoadStrings(files);
 	
 	wstr_t strDir = outPath + L"txtmess\\";
 	create_dir_recursive(strDir);
@@ -180,7 +182,7 @@ void ExportStrings(std::vector<GameFile*> &files, wstr_t outPath)
 
 	size_t strCount = 0, subCount = 0;
 
-	for (auto& pair : *strMap)
+	for (auto& pair : strMap)
 	{
 		wstr_t filename;
 		if (ext_equals(pair.first, L".tmd"))
@@ -208,8 +210,6 @@ void ExportStrings(std::vector<GameFile*> &files, wstr_t outPath)
 
 	wc << "String lines: " << strCount << std::endl;
 	wc << "Subtitle lines: " << subCount << std::endl;
-
-	delete strMap;
 }
 
 size_t ExportBinFile(GameFile *gf, wstr_t outPath)
@@ -341,17 +341,20 @@ void DoImport(int &argc, wchar_t **&argv)
 	GameData gd(dataPath);
 	ReadGameData(gd, L"text", L"Patching");
 
-	std::map<DatFile*, std::map<uint32_t, char_vector_t>> patches;
+	std::map<DatFile*, std::map<uint32_t, str_t>> patches;
 	wstr_vec_t files = find_files(inPath);
+
+	std::vector<GameFile*> strFiles;
+	std::map<std::wstring, str_map_t> strMessages;
 
 	for (wstr_t &fullName : files)
 	{
-		str_map_t messages = LoadText(inPath + fullName);
-		if (messages.size() < 1) continue;
-
 		wstr_t realName = fullName.substr(0, fullName.length() - 4);
 		wstr_t path, filename, ext;
 		split_path(realName, path, filename, ext);
+
+		str_map_t messages = LoadText(inPath + fullName);
+		if (messages.size() < 1) continue;
 
 		if (ext_equals(ext, L".bin"))
 		{
@@ -359,7 +362,7 @@ void DoImport(int &argc, wchar_t **&argv)
 
 			DatFileEntry &entry = *gf.GetDatEntry();
 			char_vector_t bin = entry.ReadFile();
-			char_vector_t patchedBin = script_import(messages, bin.data(), filename);
+			str_t patchedBin = script_import(messages, bin.data(), filename);
 
 			DatFile *dat = entry.Dat;
 			patches.try_emplace(dat);
@@ -367,24 +370,96 @@ void DoImport(int &argc, wchar_t **&argv)
 		}
 		else if (ext_equals(ext, L".tmd") || ext_equals(ext, L".smd"))
 		{
+			wstr_t name = filename.substr(0, filename.find('.'));
 
+			wstr_t strPath = path + name;
+			strPath += L"_us.dat\\";
+			strPath += filename;
+
+			if (gd.GetGameFiles().count(strPath) > 0)
+			{
+				GameFile &gf = gd[strPath];
+				strFiles.emplace_back(&gf);
+				strMessages.emplace(filename, messages);
+			}
+			else
+			{
+				wc << strPath << L" does not exist.";
+			}
 		}
 	}
 
-	for (auto &pair : patches)
+	std::map<std::wstring, mess_map> strings = LoadStrings(strFiles);
+	str_map_t outStrings;
+
+	for (auto &fileMapPair : strings)
 	{
-		DatFile *dat = pair.first;
+		str_map_t &ruMessages = strMessages[fileMapPair.first];
+		for (auto &idMesPair : fileMapPair.second)
+		{
+			str_t id = wstr_to_utf8(idMesPair.first);
+			if (ruMessages.count(id) < 1)
+			{
+				ruMessages.emplace(id, idMesPair.second.En);
+			}
+		}
+	}
+
+	for (auto &gf : strFiles)
+	{
+		auto &messages = strMessages[gf->Filename];
+		auto entry = gf->GetDatEntry();
+		auto &dat = entry->Dat;
+
+		bool bVarLength = ext_equals(gf->Extension, L".tmd");
+		
+		std::ostringstream stream(std::ios::binary);
+		
+		uint32_t numEntries = (uint32_t)messages.size();
+		stream.write((char*)&numEntries, sizeof(uint32_t));
+
+		uint32_t idLen = 0x44;
+		uint32_t valLen = 0x400;
+		for (auto &pair : messages)
+		{
+			wstr_t id = utf8_to_wstr(pair.first.data());
+			wstr_t val = utf8_to_wstr(pair.second.data());
+
+			if (bVarLength)
+			{
+				idLen = (uint32_t)id.length();
+				stream.write((char*)&idLen, sizeof(uint32_t));
+			}
+			stream.write((char*)id.data(), idLen * sizeof(wchar_t));
+
+			if (bVarLength)
+			{
+				valLen = (uint32_t)val.length();
+				stream.write((char*)&valLen, sizeof(uint32_t));
+			}
+			stream.write((char*)val.data(), valLen * sizeof(wchar_t));
+		}
+
+		patches.try_emplace(dat);
+		patches[dat].emplace(entry->Index, stream.str());
+	}
+
+	for (auto &fileMapPair : patches)
+	{
+		DatFile *dat = fileMapPair.first;
 
 		create_dir_recursive(outPath + path_strip_filename(dat->GetFilename()));
 		wstr_t datPath = outPath + dat->GetFilename();
 		CopyFile(dat->GetPath().data(), datPath.data(), false);
 
 		DatFile newDat(outPath, dat->GetFilename());
-		for (auto &gpair : pair.second)
+		for (auto &gpair : fileMapPair.second)
 		{
-			newDat.ReplaceFile(gpair.first, gpair.second);
+			newDat.InjectFile(gpair.first, gpair.second);
 		}
 	}
+
+
 }
 
 void ReadGameData(GameData& gd, const wstr_t filter, const wstr_t verb)

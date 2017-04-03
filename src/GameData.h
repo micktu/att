@@ -24,18 +24,17 @@ public:
 
 	bool Read(wstr_t filter);
 
-	FORCEINLINE void ProcessFile(wstr_t &filename, const wstr_t &filter);
 	bool CheckExtension(const wstr_t &filename, const wcs_vector_t & list) const;
-	FORCEINLINE bool IsDatFile(const wstr_t &filename) const;
-	FORCEINLINE bool IsTextFile(const wstr_t &filename) const;
-	FORCEINLINE bool IsRelevantFile(const wstr_t &filename, wstr_t filter) const;
+	bool IsDatFile(const wstr_t &filename) const;
+	bool IsTextFile(const wstr_t &filename) const;
+	bool IsRelevantFile(const wstr_t &filename, wstr_t filter) const;
 
-	FORCEINLINE const wstr_t &GetBasePath() const { return BasePath; }
-	FORCEINLINE wstr_vec_t& GetFilenames() { return Filenames; }
-	FORCEINLINE std::map<wstr_t, GameFile>& GetGameFiles() { return GameFiles; }
-	FORCEINLINE std::vector<DatFile>& GetDatFiles() { return DatFiles; }
+	const wstr_t &GetBasePath() const { return BasePath; }
+	wstr_vec_t& GetFilenames() { return Filenames; }
+	std::map<wstr_t, GameFile>& GetGameFiles() { return GameFiles; }
+	std::vector<DatFile>& GetDatFiles() { return DatFiles; }
 
-	FORCEINLINE GameFile& operator[](wstr_t id) { return GameFiles[id]; }
+	GameFile& operator[](wstr_t id) { return GameFiles[id]; }
 	auto begin() { return GameFiles.begin(); }
 	auto end() { return GameFiles.end(); }
 };

@@ -300,7 +300,9 @@ void script_dump_debug(const char* bin, wstr_t out_filename, ScriptContent* cont
 	file.close();
 }
 
-char_vector_t script_import(str_map_t &messages, const char* bin, wstr_t &filename)
+static str_t OUT_STR(0x100000, 0);
+
+str_t script_import(str_map_t &messages, const char* bin, wstr_t &filename)
 {
 	mrb_state* mrb = mrb_open();
 	mrb_irep* irep = mrb_read_irep(mrb, (uint8_t*)bin);
@@ -314,11 +316,10 @@ char_vector_t script_import(str_map_t &messages, const char* bin, wstr_t &filena
 	}
 
 	size_t outSize;
-	char_vector_t out(0x100000);
-	uint8_t* data = (uint8_t*)out.data();
+	uint8_t* data = (uint8_t*)OUT_STR.data();
 	mrb_dump_irep(mrb, irep, 0, &data, &outSize);
-	out.resize(outSize);
+	OUT_STR.resize(outSize);
 	mrb_close(mrb);
 
-	return out;
+	return OUT_STR;
 }
