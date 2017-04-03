@@ -75,4 +75,4 @@ void script_export(ScriptContent* content, wstr_t filename);
 
 void script_dump_debug(const char* bin, wstr_t out_filename, ScriptContent* content = nullptr);
 
-str_t script_import(str_map_t &messages, const char* bin, wstr_t &filename);
+char_vector_t script_import(str_map_t &messages, const char* bin, wstr_t &filename);

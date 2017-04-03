@@ -58,7 +58,7 @@ public:
 	bool Read(wstr_t &path, wstr_t &filename);
 	std::ifstream OpenFile(const DatFileEntry * entry);
 	void ReadFile(const DatFileEntry& entry, char* buffer);
-	void InjectFile(int index, str_t buffer);
+	void InjectFile(int index, char_vector_t buffer);
 	const DatFileEntry * FindFile(wstr_t &name);
 	void ExtractFile(DatFileEntry &entry, wstr_t outPath);
 	void ExtractAll(wstr_t &outPath);

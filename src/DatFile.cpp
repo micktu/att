@@ -109,7 +109,7 @@ void DatFile::ReadFile(const DatFileEntry& entry, char* buffer)
 	file.close();
 }
 
-void DatFile::InjectFile(int index, str_t buffer)
+void DatFile::InjectFile(int index, char_vector_t buffer)
 {
 	std::fstream file(FullPath, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate);
 

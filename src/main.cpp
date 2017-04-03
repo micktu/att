@@ -341,7 +341,7 @@ void DoImport(int &argc, wchar_t **&argv)
 	GameData gd(dataPath);
 	ReadGameData(gd, L"text", L"Patching");
 
-	std::map<DatFile*, std::map<uint32_t, str_t>> patches;
+	std::map<DatFile*, std::map<uint32_t, char_vector_t>> patches;
 	wstr_vec_t files = find_files(inPath);
 
 	std::vector<GameFile*> strFiles;
@@ -362,7 +362,7 @@ void DoImport(int &argc, wchar_t **&argv)
 
 			DatFileEntry &entry = *gf.GetDatEntry();
 			char_vector_t bin = entry.ReadFile();
-			str_t patchedBin = script_import(messages, bin.data(), filename);
+			char_vector_t patchedBin = script_import(messages, bin.data(), filename);
 
 			DatFile *dat = entry.Dat;
 			patches.try_emplace(dat);
@@ -427,21 +427,22 @@ void DoImport(int &argc, wchar_t **&argv)
 
 			if (bVarLength)
 			{
-				idLen = (uint32_t)id.length();
+				idLen = (uint32_t)id.length() + 1;
 				stream.write((char*)&idLen, sizeof(uint32_t));
 			}
 			stream.write((char*)id.data(), idLen * sizeof(wchar_t));
 
 			if (bVarLength)
 			{
-				valLen = (uint32_t)val.length();
+				valLen = (uint32_t)val.length() + 1;
 				stream.write((char*)&valLen, sizeof(uint32_t));
 			}
 			stream.write((char*)val.data(), valLen * sizeof(wchar_t));
 		}
 
 		patches.try_emplace(dat);
-		patches[dat].emplace(entry->Index, stream.str());
+		auto str = stream.str();
+		patches[dat].emplace(entry->Index, char_vector_t(str.begin(), str.end()));
 	}
 
 	for (auto &fileMapPair : patches)
@@ -455,7 +456,8 @@ void DoImport(int &argc, wchar_t **&argv)
 		DatFile newDat(outPath, dat->GetFilename());
 		for (auto &gpair : fileMapPair.second)
 		{
-			newDat.InjectFile(gpair.first, gpair.second);
+			auto &str = gpair.second;
+			newDat.InjectFile(gpair.first, char_vector_t(str.begin(), str.end()));
 		}
 	}
 
