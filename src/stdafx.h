@@ -11,7 +11,6 @@
 #include <map>
 #include <string>
 #include <sstream>
-#include <algorithm>
 #include <wchar.h>
 
 struct IUnknown; // Clang hack

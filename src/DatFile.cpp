@@ -32,17 +32,20 @@ bool DatFile::CheckFile(wstr_t &path)
 	return DAT_MAGIC == magic;
 }
 
-DatFile::DatFile(const wstr_t &filename) : DatFile()
+DatFile::DatFile(wstr_t path, wstr_t filename)
 {
-	Read(filename);
+	Read(path, filename);
 }
 
-bool DatFile::Read(const wstr_t &filename)
+bool DatFile::Read(wstr_t &path, wstr_t &filename)
 {
-	Path = filename;
+	BasePath = path;
+	Filename = filename;
+	FullPath = path + filename;
+
 	_entries.clear();
 
-	std::ifstream file(filename, std::ios::binary);
+	std::ifstream file(FullPath, std::ios::binary);
 
 	if (!file.is_open())  return false;
 
@@ -92,32 +95,32 @@ bool DatFile::Read(const wstr_t &filename)
 
 std::ifstream DatFile::OpenFile(const DatFileEntry* entry)
 {
-	std::ifstream file(Path, std::ios::binary);
+	std::ifstream file(FullPath, std::ios::binary);
 	file.seekg(entry->Offset);
 	return file;
 }
 
 void DatFile::ReadFile(const DatFileEntry& entry, char* buffer)
 {
-	std::ifstream file(Path, std::ios::binary);
+	std::ifstream file(FullPath, std::ios::binary);
 
 	file.seekg(entry.Offset);
 	file.read(buffer, entry.Size);
 	file.close();
 }
 
-void DatFile::InjectFile(int index, char * buffer, uint32_t numBytes)
+void DatFile::ReplaceFile(int index, char_vector_t buffer)
 {
-	std::ofstream file(Path, std::ios::binary);
+	std::fstream file(FullPath, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate);
 
-	file.seekp(0, std::ios::end);
 	uint32_t offset = (uint32_t)file.tellp();
-	file.write(buffer, numBytes);
+	file.write(buffer.data(), buffer.size());
 
 	file.seekp(_header.files + sizeof(dat_offset_t) * index);
 	file.write((char*)&offset, sizeof(dat_offset_t));
 
 	file.seekp(_header.sizes + sizeof(dat_size_t) * index);
+	dat_size_t numBytes = (dat_size_t)buffer.size();
 	file.write((char*)&numBytes, sizeof(dat_size_t));
 
 	file.close();
@@ -155,4 +158,3 @@ void DatFile::ExtractAll(wstr_t &outPath)
 		ExtractFile(entry, outPath);
 	}
 }
-

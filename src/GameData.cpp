@@ -30,7 +30,7 @@ bool GameData::Read(wstr_t filter)
 	return true;
 }
 
-void GameData::ProcessFile(const wstr_t &filename, const wstr_t &filter)
+void GameData::ProcessFile(wstr_t &filename, const wstr_t &filter)
 {
 	wstr_t filePath = BasePath + filename;
 
@@ -41,10 +41,10 @@ void GameData::ProcessFile(const wstr_t &filename, const wstr_t &filter)
 		return;
 	}
 
-	if (IsDatFile(filePath))
+	if (IsDatFile(filename))
 	{
 		size_t datIndex = DatFiles.size();
-		DatFiles.emplace_back(filePath);
+		DatFiles.emplace_back(BasePath, filename);
 		DatFile &df = DatFiles.back();
 
 		wstr_t relPath = add_slash(filename);
@@ -90,18 +90,16 @@ bool GameData::IsRelevantFile(const wstr_t &filename, wstr_t filter) const
 	if (filter.empty()) return true;
 
 	std::transform(filter.begin(), filter.end(), filter.begin(), ::tolower);
-	
+
 	if (filter.compare(L"data") == 0)
 	{
 		return IsDatFile(filename);
 	}
-	if (filter.compare(L"text") == 0)
+	else if (filter.compare(L"text") == 0)
 	{
 		return IsTextFile(filename);
 	}
-	else
-	{
-		if (filter[0] != '.') filter = L"." + filter;
-		return ext_equals(filename, filter.c_str());
-	}
+
+	if (filter[0] != '.') filter = L"." + filter;
+	return ext_equals(filename, filter.data());
 }

@@ -260,11 +260,12 @@ void ExportScripts(std::vector<GameFile*> &files, wstr_t outPath)
 
 void DoExport(int &argc, wchar_t ** &argv)
 {
-	wstr_t path = add_slash(path_normalize(argv[0]));
-	const wchar_t* outp = argc > 1 ? argv[1] : L"out";
+	const wchar_t* datap = argc > 0 ? argv[0] : L"data";
+	wstr_t dataPath = add_slash(path_normalize(datap));
+	const wchar_t* outp = argc > 1 ? argv[1] : L"text";
 	wstr_t outPath = add_slash(path_normalize(outp));
 
-	GameData gd(path);
+	GameData gd(dataPath);
 	ReadGameData(gd, L"text", L"Exporting");
 
 	//wc << L"Reading files..." << std::endl;
@@ -297,7 +298,7 @@ void DoExport(int &argc, wchar_t ** &argv)
 	wc << L"All done.";
 }
 
-str_map_t LoadText(wstr_t &path)
+str_map_t LoadText(wstr_t path)
 {
 	std::ifstream file(path);
 
@@ -330,16 +331,19 @@ str_map_t LoadText(wstr_t &path)
 
 void DoImport(int &argc, wchar_t **&argv)
 {
-	wstr_t dataPath = add_slash(path_normalize(argv[0]));
-	wstr_t inPath = add_slash(path_normalize(argv[1]));
+	const wchar_t* datap = argc > 0 ? argv[0] : L"data";
+	wstr_t dataPath = add_slash(path_normalize(datap));
+	const wchar_t* inp = argc > 1 ? argv[1] : L"text";
+	wstr_t inPath = add_slash(path_normalize(inp));
 	const wchar_t* outp = argc > 2 ? argv[2] : L"patch";
 	wstr_t outPath = add_slash(path_normalize(outp));
 
 	GameData gd(dataPath);
 	ReadGameData(gd, L"text", L"Patching");
 
+	std::map<DatFile*, std::map<uint32_t, char_vector_t>> patches;
 	wstr_vec_t files = find_files(inPath);
-	
+
 	for (wstr_t &fullName : files)
 	{
 		str_map_t messages = LoadText(inPath + fullName);
@@ -353,15 +357,32 @@ void DoImport(int &argc, wchar_t **&argv)
 		{
 			GameFile &gf = gd[realName];
 
-			char_vector_t bin = gf.GetDatEntry()->ReadFile();
+			DatFileEntry &entry = *gf.GetDatEntry();
+			char_vector_t bin = entry.ReadFile();
 			char_vector_t patchedBin = script_import(messages, bin.data(), filename);
 
-			// TODO Create dir; Copy dat; cache dat; write patch int dat
-
+			DatFile *dat = entry.Dat;
+			patches.try_emplace(dat);
+			patches[dat].emplace(entry.Index, patchedBin);
 		}
 		else if (ext_equals(ext, L".tmd") || ext_equals(ext, L".smd"))
 		{
 
+		}
+	}
+
+	for (auto &pair : patches)
+	{
+		DatFile *dat = pair.first;
+
+		create_dir_recursive(outPath + path_strip_filename(dat->GetFilename()));
+		wstr_t datPath = outPath + dat->GetFilename();
+		CopyFile(dat->GetPath().data(), datPath.data(), false);
+
+		DatFile newDat(outPath, dat->GetFilename());
+		for (auto &gpair : pair.second)
+		{
+			newDat.ReplaceFile(gpair.first, gpair.second);
 		}
 	}
 }

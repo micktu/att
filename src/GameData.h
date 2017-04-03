@@ -24,13 +24,13 @@ public:
 
 	bool Read(wstr_t filter);
 
-	FORCEINLINE void ProcessFile(const wstr_t &filename, const wstr_t &filter);
+	FORCEINLINE void ProcessFile(wstr_t &filename, const wstr_t &filter);
 	bool CheckExtension(const wstr_t &filename, const wcs_vector_t & list) const;
 	FORCEINLINE bool IsDatFile(const wstr_t &filename) const;
 	FORCEINLINE bool IsTextFile(const wstr_t &filename) const;
 	FORCEINLINE bool IsRelevantFile(const wstr_t &filename, wstr_t filter) const;
 
-	FORCEINLINE wstr_t GetBasePath() { return BasePath; }
+	FORCEINLINE const wstr_t &GetBasePath() const { return BasePath; }
 	FORCEINLINE wstr_vec_t& GetFilenames() { return Filenames; }
 	FORCEINLINE std::map<wstr_t, GameFile>& GetGameFiles() { return GameFiles; }
 	FORCEINLINE std::vector<DatFile>& GetDatFiles() { return DatFiles; }

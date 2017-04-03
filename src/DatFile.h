@@ -3,7 +3,8 @@
 #include "stdafx.h"
 
 
-#define DAT_MAGIC '\x00TAD'
+static const uint32_t DAT_MAGIC = '\x00TAD';
+
 typedef uint32_t dat_offset_t, dat_size_t;
 using dat_name_t = char[MAX_PATH];
 using dat_ext_t = char[4];
@@ -39,7 +40,9 @@ struct DatFileEntry
 
 class DatFile
 {
-	wstr_t Path;
+	wstr_t BasePath;
+	wstr_t Filename;
+	wstr_t FullPath;
 	std::vector<DatFileEntry> _entries;
 	dat_header _header;
 
@@ -50,20 +53,19 @@ private:
 public:
 	static bool CheckFile(wstr_t &path);
 
-	DatFile() = default;
-	DatFile(const DatFile &obj) = default;
-	DatFile(const wstr_t &path);
+	DatFile(wstr_t path, wstr_t filename);
 
-	bool Read(const wstr_t &filename);
+	bool Read(wstr_t &path, wstr_t &filename);
 	std::ifstream OpenFile(const DatFileEntry * entry);
 	void ReadFile(const DatFileEntry& entry, char* buffer);
-	void InjectFile(int index, char * buffer, uint32_t numBytes);
+	void ReplaceFile(int index, char_vector_t buffer);
 	const DatFileEntry * FindFile(wstr_t &name);
 	void ExtractFile(DatFileEntry &entry, wstr_t outPath);
 	void ExtractAll(wstr_t &outPath);
 
-	FORCEINLINE wstr_t GetPath() const { return Path; }
-	FORCEINLINE size_t NumEntries() const { return _entries.size(); }
+	FORCEINLINE const wstr_t &GetPath() const { return FullPath; }
+	FORCEINLINE const wstr_t &GetFilename() const { return Filename; }
+	FORCEINLINE size_t NumEntries() { return _entries.size(); }
 	FORCEINLINE DatFileEntry& operator[](size_t index) { return _entries[index]; }
 
 	auto begin() { return _entries.begin(); }

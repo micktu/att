@@ -22,5 +22,5 @@ struct GameFile
 
 	GameData *Data;
 
-	DatFileEntry* GetDatEntry() const;
+	DatFileEntry *GetDatEntry() const;
 };

@@ -146,7 +146,6 @@ size_t get_file_size(const wstr_t& filename)
 {
 	std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
 	return in.tellg();
-	in.close();
 }
 
 wstr_t utf8_to_wstr(const char* bytes)
