@@ -4,7 +4,6 @@
 #include <PathCch.h>
 #include <locale>
 #include <codecvt>
-#include <regex>
 
 #include "script.h"
 
@@ -102,16 +101,13 @@ wstr_vec_t find_files(wstr_t path)
 	return find_files_recursive(path);
 }
 
-static const std::regex CRLF_REGEX("(\\r\\n)|\\n");
-#define rep_crlf(str) std::regex_replace(str, CRLF_REGEX, "\\n")
-
 str_t format_loc_message(LocMessage &message)
 {
 	std::stringstream str;
 
 	str << "ID: " << message.Id << std::endl;
-	str << "JP: " << rep_crlf(message.Jp) << std::endl;
-	str << "EN: " << rep_crlf(message.En) << std::endl;
+	str << "JP: " << lb_to_lit(message.Jp) << std::endl;
+	str << "EN: " << lb_to_lit(message.En) << std::endl;
 	str << "RU: " << "" << std::endl;
 
 	return str.str();

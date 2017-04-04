@@ -314,13 +314,14 @@ char_vector_t script_import(str_map_t &messages, const char* bin, wstr_t &filena
 	}
 
 	size_t outSize;
-	uint8_t *buffer = new uint8_t[0x100000];
+	uint8_t *buffer;
 	mrb_dump_irep(mrb, irep, 0, &buffer, &outSize);
-	mrb_close(mrb);
 
 	char *p = (char *)buffer;
 	char_vector_t out(p, p + outSize);
-	delete buffer;
+
+	mrb_free(mrb, buffer);
+	mrb_close(mrb);
 
 	return out;
 }

@@ -1,6 +1,5 @@
 #include "main.h"
 
-#include <regex>
 #include <conio.h>
 
 #include "GameData.h"
@@ -27,7 +26,6 @@ int wmain(int argc, wchar_t *argv[])
 	wchar_t ** av = argv + 2;
 	it->second(ac, av);
 
-	//while (!_kbhit()) {}
 	return 0;
 }
 
@@ -76,7 +74,6 @@ void DoExtract(int &argc, wchar_t ** &argv)
 	}
 }
 
-static const std::wregex STR_FILE_REGEX(L"\\\\\\w+?(_([a-zA-Z]{2}))?\\.dat");
 static wchar_t WCS_BUFFER[0x2B2B];
 
 std::map<std::wstring, mess_map> LoadStrings(std::vector<GameFile*> files)
@@ -85,12 +82,11 @@ std::map<std::wstring, mess_map> LoadStrings(std::vector<GameFile*> files)
 	
 	for (GameFile* gf : files)
 	{
+
 		DatFileEntry* dat = gf->GetDatEntry();
 		wstr_t datPath(dat->Dat->GetPath());
 
-		std::wsmatch match;
-		std::regex_search(datPath, match, STR_FILE_REGEX);
-		const wstr_t &loc = match[2].str();
+		wstr_t loc = find_filename_suffix(datPath);
 
 		if (strMap.count(gf->Filename) < 1)
 		{
@@ -322,7 +318,7 @@ str_map_t LoadText(wstr_t path)
 				std::cout << id << " translation already exists.";
 			}
 
-			messages.emplace(id, payload);
+			messages.emplace(id, lit_to_lb(payload));
 		}
 	}
 
