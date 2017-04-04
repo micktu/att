@@ -7,8 +7,14 @@
 #include "utils.h"
 
 
+#define CMD_INDENT (L"  ")
+
 int wmain(int argc, wchar_t *argv[])
 {
+	wc << std::endl << CMD_INDENT << L"NieR: Automata Text Tools" << std::endl;
+	wc << CMD_INDENT << L"https://github.com/micktu/att" << std::endl;
+	wc << std::endl;
+
 	if (argc < 2)
 	{
 		DoHelp();
@@ -31,17 +37,23 @@ int wmain(int argc, wchar_t *argv[])
 
 void DoHelp()
 {
-	wc << std::endl << L"NieR: Automata Text Tools by @micktu" << std::endl;
-	wc << std::endl << L"  Available commands:" << std::endl;
-	wc << std::endl << L"  att list <PATH> [FILTER]" << std::endl;
-	wc << L"      Lists all files in a directory or .dat container specified by <PATH>." << std::endl;
+	wc << L"Available commands:" << std::endl;
+	wc << std::endl << L"att list DATA FILTER" << std::endl;
+	wc << L"    Lists all files in a directory." << std::endl;
+	wc << std::endl << L"att list DATA OUT FILTER" << std::endl;
+	wc << L"    Extracts all files in a directory." << std::endl;
+	wc << std::endl << L"att export DATA OUT" << std::endl;
+	wc << L"    Exports all text in a directory." << std::endl;
+	wc << std::endl << L"att import DATA TEXT OUT" << std::endl;
+	wc << L"    Creates patch with imported text files." << std::endl;
 }
 
 void DoList(int &argc, wchar_t ** &argv)
 {
-	wstr_t path = add_slash(path_normalize(argv[0]));
+	const wchar_t* datap = argc > 0 ? argv[0] : L"data";
+	wstr_t dataPath = add_slash(path_normalize(datap));
 
-	GameData gd(path);
+	GameData gd(dataPath);
 	ReadGameData(gd, argc > 1 ? argv[1] : L"", L"Listing");
 
 	for (auto &pair : gd)
@@ -53,11 +65,14 @@ void DoList(int &argc, wchar_t ** &argv)
 
 void DoExtract(int &argc, wchar_t ** &argv)
 {
-	wstr_t path = add_slash(path_normalize(argv[0]));
-	wstr_t outPath = add_slash(path_normalize(argv[1]));
-
-	GameData gd(path);
-	ReadGameData(gd, argc > 2 ? argv[2] : L"", L"Extracting");
+	const wchar_t* datap = argc > 0 ? argv[0] : L"data";
+	wstr_t dataPath = add_slash(path_normalize(datap));
+	const wchar_t* outp = argc > 1 ? argv[1] : L"extract";
+	wstr_t outPath = add_slash(path_normalize(outp));
+	const wchar_t* filter = argc > 2 ? argv[2] : L"";
+	
+	GameData gd(dataPath);
+	ReadGameData(gd, argc > 2 ? argv[2] : filter, L"Extracting");
 
 	std::vector<DatFile> &datFiles = gd.GetDatFiles();
 
@@ -86,7 +101,7 @@ std::map<std::wstring, mess_map> LoadStrings(std::vector<GameFile*> files)
 		DatFileEntry* dat = gf->GetDatEntry();
 		wstr_t datPath(dat->Dat->GetPath());
 
-		wstr_t loc = find_filename_suffix(datPath);
+		wstr_t loc = find_filename_suffix(datPath, 2);
 
 		if (strMap.count(gf->Filename) < 1)
 		{

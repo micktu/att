@@ -106,6 +106,8 @@ str_t format_loc_message(LocMessage &message)
 	std::stringstream str;
 
 	str << "ID: " << message.Id << std::endl;
+	//str << "JP: " << message.Jp << std::endl;
+	//str << "EN: " << message.En << std::endl;
 	str << "JP: " << lb_to_lit(message.Jp) << std::endl;
 	str << "EN: " << lb_to_lit(message.En) << std::endl;
 	str << "RU: " << "" << std::endl;

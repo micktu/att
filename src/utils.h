@@ -40,6 +40,7 @@ template<class T> std::basic_string<T> lb_to_lit(const std::basic_string<T> &in)
 		}
 	}
 
+	out.resize(i);
 	return out;
 }
 
@@ -64,7 +65,7 @@ template<class T> std::basic_string<T> lit_to_lb(const std::basic_string<T> &in)
 	return out;
 }
 
-template<class T> std::basic_string<T> find_filename_suffix(const std::basic_string<T> &name)
+template<class T> std::basic_string<T> find_filename_suffix(const std::basic_string<T> &name, int len)
 {
 	std::basic_string<T>::const_iterator startPos = name.end();
 	std::basic_string<T>::const_iterator dotPos = name.end();
@@ -93,6 +94,13 @@ template<class T> std::basic_string<T> find_filename_suffix(const std::basic_str
 	{
 		if (*it == '_') usPos = it;
 	}
+
+	if (usPos != name.end())
+	{
+		wc << L"";
+	}
+
+	if (usPos == name.end() || dotPos - usPos - 1 != len) return std::basic_string<T>();
 
 	return std::basic_string<T>(usPos + 1, dotPos);
 }
