@@ -101,6 +101,7 @@ ScriptContent* collect_dialogue(mrb_state* mrb, mrb_irep* irep, wstr_t & filenam
 		}
 
 		std::string sym(s);
+		delete s;
 
 		if (!bFound && (sym.find("mess") != -1 || sym.find("podtalk") != -1 || sym.find("sele_ex") != -1))
 		{
